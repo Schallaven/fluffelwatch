@@ -36,6 +36,8 @@ class MainWindow : public QMainWindow
 
         /* Painting brushes, pens, and fonts */
         QBrush backgroundBrush;
+        QFont fontTitle;
+        QPen penTitle;
 };
 
 #endif // MAINWINDOW_H

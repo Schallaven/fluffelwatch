@@ -14,6 +14,8 @@ MainWindow::MainWindow(QWidget *parent) :
 
     /* Set up all the painting tools */
     backgroundBrush = QBrush(QColor(0, 0, 0));
+    fontTitle = QFont("Arial", 22, QFont::Bold);
+    penTitle = QPen(QColor(230, 170, 25));
 }
 
 MainWindow::~MainWindow() {
@@ -50,8 +52,15 @@ void MainWindow::paintEvent(QPaintEvent* event) {
     Q_UNUSED(event)
 
     QPainter painter(this);
+    painter.setRenderHint(QPainter::Antialiasing);
+    painter.testRenderHint(QPainter::TextAntialiasing);
 
     /* Fill background */
     painter.setBrush(backgroundBrush);
     painter.drawRect(this->rect());
+
+    /* Title */
+    painter.setFont(fontTitle);
+    painter.setPen(penTitle);
+    painter.drawText(QRect(0, 0, width(), 100), Qt::AlignHCenter | Qt::AlignVCenter, "Alien: Isolation No Major Glitches - Novice");
 }
