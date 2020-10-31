@@ -4,11 +4,16 @@
 MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
     ui(new Ui::MainWindow) {
+    /* Setup UI including action context menu */
     ui->setupUi(this);
+    this->addAction(ui->action_Exit);
 
-    setStyleSheet("background-color: black; border: 1px solid red;");
+    /* Borderless window with black background */
     setWindowFlags(Qt::FramelessWindowHint);
     setAttribute(Qt::WA_TranslucentBackground, true);
+
+    /* Set up all the painting tools */
+    backgroundBrush = QBrush(QColor(0, 0, 0));
 }
 
 MainWindow::~MainWindow() {
@@ -35,8 +40,18 @@ void MainWindow::mouseMoveEvent(QMouseEvent* event) {
 }
 
 void MainWindow::mouseReleaseEvent(QMouseEvent* event) {
-    Q_UNUSED(event);
+    Q_UNUSED(event)
 
     /* Stop moving in any case */
     isMoving = false;
+}
+
+void MainWindow::paintEvent(QPaintEvent* event) {
+    Q_UNUSED(event)
+
+    QPainter painter(this);
+
+    /* Fill background */
+    painter.setBrush(backgroundBrush);
+    painter.drawRect(this->rect());
 }

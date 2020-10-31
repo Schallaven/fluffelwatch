@@ -3,6 +3,8 @@
 
 #include <QMainWindow>
 #include <QMouseEvent>
+#include <QPainter>
+#include <QPaintEvent>
 
 namespace Ui {
     class MainWindow;
@@ -21,6 +23,9 @@ class MainWindow : public QMainWindow
         void mouseMoveEvent(QMouseEvent* event) override;
         void mouseReleaseEvent(QMouseEvent* event) override;
 
+        /* Paint event */
+        void paintEvent(QPaintEvent *event) override;
+
     private:
         /* User interface definitions */
         Ui::MainWindow *ui;
@@ -28,6 +33,9 @@ class MainWindow : public QMainWindow
         /* Window movement on client */
         bool isMoving = false;
         QPoint movingStartPos;
+
+        /* Painting brushes, pens, and fonts */
+        QBrush backgroundBrush;
 };
 
 #endif // MAINWINDOW_H
