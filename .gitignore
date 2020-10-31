@@ -1,3 +1,9 @@
+# Fluffelwatch files and directories
+build/*
+bin/*
+!build/README.md
+!bin/README.md
+
 # C++ objects and libs
 *.slo
 *.lo
