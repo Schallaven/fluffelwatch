@@ -26,11 +26,13 @@ DEFINES += QT_DEPRECATED_WARNINGS
 SOURCES += \
         main.cpp \
         mainwindow.cpp \
-    splitdata.cpp
+    splitdata.cpp \
+    fluffeltimer.cpp
 
 HEADERS += \
         mainwindow.h \
-    splitdata.h
+    splitdata.h \
+    fluffeltimer.h
 
 FORMS += \
         mainwindow.ui

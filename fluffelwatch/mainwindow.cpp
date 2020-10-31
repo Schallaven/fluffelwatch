@@ -23,6 +23,9 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::MainWi
 
     /* Calculate the region and window size */
     calculateRegionSizes();
+
+    /* Start timer every 100 msec (can do more, but it costs CPU time!) */
+    startTimer(100, Qt::PreciseTimer);
 }
 
 MainWindow::~MainWindow() {
@@ -90,27 +93,44 @@ void MainWindow::paintEvent(QPaintEvent* event) {
     painter.drawText(QRect(regionStatus.right() - mainTimerSize.width() - marginSize,
                            regionStatus.top() + marginSize,
                            mainTimerSize.width(),
-                           mainTimerSize.height()), Qt::AlignRight | Qt::AlignVCenter, "00:00:00.00");
+                           mainTimerSize.height()), Qt::AlignRight | Qt::AlignVCenter, timerReal.toString());
 
     painter.setFont(fontAdjustedTimer);
     painter.setPen(penAdjustedTimer);
     painter.drawText(QRect(regionStatus.right() - adjustedTimerSize.width() - marginSize,
                            regionStatus.bottom() - adjustedTimerSize.height() - marginSize,
                            adjustedTimerSize.width(),
-                           adjustedTimerSize.height()), Qt::AlignRight | Qt::AlignVCenter, "00:00:00.00");
+                           adjustedTimerSize.height()), Qt::AlignRight | Qt::AlignVCenter, timerAdjusted.toString());
 
+}
+
+void MainWindow::timerEvent(QTimerEvent* event) {
+    /* Update the display */
+    update();
 }
 
 void MainWindow::onSplit() {
     qDebug("Start/Split");
+    timerReal.start();
+    timerAdjusted.start();
 }
 
 void MainWindow::onPause() {
-    qDebug("Pause");
+    if (timerReal.isPaused()) {
+        qDebug("resume");
+        timerReal.resume();
+        timerAdjusted.resume();
+    } else {
+        qDebug("pause");
+        timerReal.pause();
+        timerAdjusted.pause();
+    }
 }
 
 void MainWindow::onReset() {
     qDebug("Reset");
+    timerReal.invalidate();
+    timerAdjusted.invalidate();
 }
 
 void MainWindow::onExit() {

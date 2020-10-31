@@ -8,6 +8,7 @@
 #include <QPaintEvent>
 #include <QSettings>
 
+#include "fluffeltimer.h"
 #include "splitdata.h"
 
 namespace Ui {
@@ -29,6 +30,9 @@ class MainWindow : public QMainWindow {
     /* Paint event */
     void paintEvent(QPaintEvent *event) override;
 
+    /* Timer event (for painting) */
+    void timerEvent(QTimerEvent *event) override;
+
   public slots:
     /* Slots */
     void onSplit();
@@ -49,6 +53,8 @@ class MainWindow : public QMainWindow {
 
     /* Data and timer objects */
     SplitData data;
+    FluffelTimer timerReal;
+    FluffelTimer timerAdjusted;
 
     /* Painting brushes, pens, and fonts */
     QBrush backgroundBrush;
