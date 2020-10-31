@@ -4,6 +4,13 @@
 MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::MainWindow) {
     /* Setup UI including action context menu */
     ui->setupUi(this);
+    QAction *separator = new QAction(this);
+    separator->setSeparator(true);
+
+    this->addAction(ui->action_Start_Split);
+    this->addAction(ui->action_Pause);
+    this->addAction(ui->action_Reset);
+    this->addAction(separator);
     this->addAction(ui->action_Exit);
 
     /* Read in settings from an conf-file */
@@ -92,6 +99,22 @@ void MainWindow::paintEvent(QPaintEvent* event) {
                            adjustedTimerSize.width(),
                            adjustedTimerSize.height()), Qt::AlignRight | Qt::AlignVCenter, "00:00:00.00");
 
+}
+
+void MainWindow::onSplit() {
+    qDebug("Start/Split");
+}
+
+void MainWindow::onPause() {
+    qDebug("Pause");
+}
+
+void MainWindow::onReset() {
+    qDebug("Reset");
+}
+
+void MainWindow::onExit() {
+    this->close();
 }
 
 void MainWindow::readSettings() {
