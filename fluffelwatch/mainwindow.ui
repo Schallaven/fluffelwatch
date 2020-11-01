@@ -43,7 +43,7 @@
   </action>
   <action name="action_Pause">
    <property name="text">
-    <string>&amp;Pause</string>
+    <string>&amp;Pause/Resume</string>
    </property>
    <property name="toolTip">
     <string>Pause the timer</string>

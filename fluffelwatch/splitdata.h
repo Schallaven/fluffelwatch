@@ -3,7 +3,6 @@
 
 #include <QFile>
 #include <QList>
-#include <QQueue>
 #include <QString>
 #include <QTextStream>
 
@@ -39,6 +38,14 @@ class SplitData {
      * lines added (if less). */
     int getCurrentSegments(QList<segment>& list, int lines) const;
 
+    /* Split, returns the number of segments remaining in futureSegments */
+    int split(quint64 curtime);
+    bool canSplit() const;
+    bool hasSplit() const;
+
+    /* Resets the list and merges times if wanted */
+    void reset(bool merge = false);
+
   private:
     /* Segment lists: all segments contains all segments in a list.
      * futureSegments contains all segments that still have to be
@@ -46,15 +53,15 @@ class SplitData {
      * in reversed order (i.e. the latest segment run is at the front
      * of the list) */
     QList<segment> allSegments;
-    QQueue<segment> futureSegments;
-    QQueue<segment> pastSegments;
+    QList<segment> futureSegments;
+    QList<segment> pastSegments;
 
     /* Title of the run */
     QString title;
 
     /* Gets n lines or less from a segment queue Returns
      * the real number of lines added (if less). */
-    int getSegments(QList<segment>& toList, const QList<segment> &fromList, int lines) const;
+    int getSegments(QList<segment>& toList, const QList<segment> &fromList, int lines, bool backwards = false) const;
 
 };
 

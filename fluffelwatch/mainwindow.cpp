@@ -95,7 +95,8 @@ void MainWindow::paintEvent(QPaintEvent* event) {
     painter.drawLine(regionTitle.bottomLeft(), regionTitle.bottomRight());
 
     /* Time list */
-    for (int i = 0; i < displaySegments.size(); ++i) {
+    int lines = qMin(segmentLines, displaySegments.size());
+    for (int i = 0; i < lines; ++i) {
         paintSegmentLine(painter, QRect(marginSize,
                                         regionTimeList.top() + marginSize + i * segmentSize.height(),
                                         segmentSize.width(),
@@ -135,12 +136,37 @@ void MainWindow::timerEvent(QTimerEvent* event) {
 }
 
 void MainWindow::onSplit() {
-    qDebug("Start/Split");
-    timerReal.start();
-    timerAdjusted.start();
+    /* If timers are not started yet, start them */
+    if (!timerReal.isValid()) {
+        qDebug("Start");
+        timerReal.start();
+        timerAdjusted.start();
+
+        return;
+    }
+
+    /* Otherwise, split the time here */
+    qDebug("Split");
+    displaySegments.clear();
+    int remains = data.split(timerReal.elapsed_with_pause());
+    int segments = data.getCurrentSegments(displaySegments, segmentLines);
+    qDebug("Got %d segments from data object", segments);
+
+    /* Stop the timer if that was the last split */
+    if (remains == 0) {
+        timerReal.pause();
+        timerAdjusted.pause();
+    }
 }
 
 void MainWindow::onPause() {
+    /* Doesn't do anything if there are no more splits to do */
+    if (!data.canSplit()) {
+        qDebug("Cannot do any more splits");
+        return;
+    }
+
+    /* Check if paused or not */
     if (timerReal.isPaused()) {
         qDebug("resume");
         timerReal.resume();
@@ -153,9 +179,29 @@ void MainWindow::onPause() {
 }
 
 void MainWindow::onReset() {
+    bool merge = false;
+
+    /* Pause timer so they do not continue running */
+    timerReal.pause();
+    timerAdjusted.pause();
+
+    /* Check if there have been splits and ask user about data */
+    if (data.hasSplit()) {
+        int ret = QMessageBox::warning(this, "Segment times changed", "Do you want to merge your times before reset?",
+                                       QMessageBox::Save | QMessageBox::No, QMessageBox::Save);
+
+        merge = (ret == QMessageBox::Save);
+    }
+
     qDebug("Reset");
     timerReal.invalidate();
     timerAdjusted.invalidate();
+    displaySegments.clear();
+
+    /* Reset data */
+    data.reset(merge);
+    int segments = data.getCurrentSegments(displaySegments, segmentLines);
+    qDebug("Got %d segments from data object", segments);
 }
 
 void MainWindow::onExit() {

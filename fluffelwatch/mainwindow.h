@@ -3,6 +3,7 @@
 
 #include <QFontMetrics>
 #include <QMainWindow>
+#include <QMessageBox>
 #include <QMouseEvent>
 #include <QPainter>
 #include <QPaintEvent>
