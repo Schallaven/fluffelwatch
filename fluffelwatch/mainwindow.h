@@ -1,6 +1,7 @@
 #ifndef MAINWINDOW_H
 #define MAINWINDOW_H
 
+#include <QFileDialog>
 #include <QFontMetrics>
 #include <QMainWindow>
 #include <QMessageBox>
@@ -35,10 +36,14 @@ class MainWindow : public QMainWindow {
     void timerEvent(QTimerEvent *event) override;
 
   public slots:
-    /* Slots */
     void onSplit();
     void onPause();
     void onReset();
+
+    void onOpen();
+    void onSave();
+    void onSaveAs();
+
     void onExit();
 
   private:

@@ -4,13 +4,19 @@
 MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::MainWindow) {
     /* Setup UI including action context menu */
     ui->setupUi(this);
-    QAction *separator = new QAction(this);
-    separator->setSeparator(true);
+    QAction *separator1 = new QAction(this);
+    QAction *separator2 = new QAction(this);
+    separator1->setSeparator(true);
+    separator2->setSeparator(true);
 
     this->addAction(ui->action_Start_Split);
     this->addAction(ui->action_Pause);
     this->addAction(ui->action_Reset);
-    this->addAction(separator);
+    this->addAction(separator1);
+    this->addAction(ui->action_Open);
+    this->addAction(ui->actionS_ave);
+    this->addAction(ui->actionSave_as);
+    this->addAction(separator2);
     this->addAction(ui->action_Exit);
 
     /* Read in settings from an conf-file */
@@ -202,6 +208,81 @@ void MainWindow::onReset() {
     data.reset(merge);
     int segments = data.getCurrentSegments(displaySegments, segmentLines);
     qDebug("Got %d segments from data object", segments);
+}
+
+void MainWindow::onOpen()
+{
+    qDebug("open");
+
+    /* Pause timer so they do not continue running */
+    timerReal.pause();
+    timerAdjusted.pause();
+
+    /* Check if there have been splits and ask user about data */
+    if (data.hasSplit()) {
+        int ret = QMessageBox::warning(this, "Segment times changed", "Do you want to discard this data?",
+                                       QMessageBox::Yes | QMessageBox::No, QMessageBox::Yes);
+
+        if (ret == QMessageBox::No) {
+            return;
+        }
+    }
+
+    qDebug("open new file");
+
+    /* Let the user select a filename and try to open this file */
+    QString filename = QFileDialog::getOpenFileName(this, "Open file with data segments", "", "All files (*.*)");
+
+    if (filename.length() == 0)
+        return;
+
+    /* Load data */
+    data.loadData(filename);
+
+    /* Set back timers, display, etc. */
+    timerReal.invalidate();
+    timerAdjusted.invalidate();
+
+    displaySegments.clear();
+    data.getCurrentSegments(displaySegments, segmentLines);
+
+    calculateRegionSizes();
+}
+
+void MainWindow::onSave()
+{
+    qDebug("save");
+
+    /* Pause timer so they do not continue running */
+    timerReal.pause();
+    timerAdjusted.pause();
+
+    /* Merging unsaved data */
+    data.reset(true);
+
+    /* Check for filename */
+    if (data.getFilename().size() == 0) {
+        onSaveAs();
+    } else {
+        data.saveData(data.getFilename());
+    }
+}
+
+void MainWindow::onSaveAs()
+{
+    qDebug("saveas");
+
+    /* Pause timer so they do not continue running */
+    timerReal.pause();
+    timerAdjusted.pause();
+
+    /* Let the user select a filename to save the segment data */
+    QString filename = QFileDialog::getSaveFileName(this, "Save segment data", data.getFilename(), "All files (*.*)");
+
+    if (filename.length() == 0)
+        return;
+
+    data.saveData(filename);
 }
 
 void MainWindow::onExit() {

@@ -63,12 +63,35 @@ void SplitData::loadData(const QString& filename) {
     qDebug("Loaded %d segments from file", allSegments.size());
 
     /* Close file and then copy the list to future segments */
+    this->filename = filename;
     file.close();
 }
 
-void SplitData::saveData(const QString& filename) const {
+void SplitData::saveData(const QString& filename) {
     qDebug("saving data to %s", filename.toStdString().c_str());
 
+    /* Open given file as a text file for write only (truncates file!) */
+    QFile file(filename);
+
+    if (!file.open(QIODevice::WriteOnly)) {
+        qDebug("Could not open file.");
+        return;
+    }
+
+    QTextStream out(&file);
+
+    /* Write title of run */
+    out << "TITLE: " << title << "\n\n";
+
+    /* Write a line for each segment */
+    for (int i = 0; i < allSegments.size(); ++i) {
+        segment data = allSegments[i];
+        out << data.title << ", " << data.runtime << ", " << data.besttime << ", " << data.mission << "\n";
+    }
+
+    /* Close file */
+    this->filename = filename;
+    file.close();
 }
 
 QString SplitData::getTitle() const {
@@ -193,6 +216,11 @@ void SplitData::reset(bool merge) {
 
     qDebug("after reset: %d past, %d future", pastSegments.size(), futureSegments.size());
 }
+
+QString SplitData::getFilename() const {
+    return filename;
+}
+
 
 int SplitData::getSegments(QList<segment>& toList, const QList<segment>& fromList, int lines, bool backwards) const {
     /* Empty list */

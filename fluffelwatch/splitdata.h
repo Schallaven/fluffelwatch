@@ -13,7 +13,7 @@ class SplitData {
 
     /* Loading/Saving split data */
     void loadData(const QString &filename);
-    void saveData(const QString &filename) const;
+    void saveData(const QString &filename);
 
     /* Segment */
     struct segment {
@@ -46,7 +46,9 @@ class SplitData {
     /* Resets the list and merges times if wanted */
     void reset(bool merge = false);
 
-  private:
+    QString getFilename() const;
+
+    private:
     /* Segment lists: all segments contains all segments in a list.
      * futureSegments contains all segments that still have to be
      * run in normal order. pastSegments contains all past segments
@@ -56,8 +58,9 @@ class SplitData {
     QList<segment> futureSegments;
     QList<segment> pastSegments;
 
-    /* Title of the run */
+    /* Title and filename of the run */
     QString title;
+    QString filename;
 
     /* Gets n lines or less from a segment queue Returns
      * the real number of lines added (if less). */
