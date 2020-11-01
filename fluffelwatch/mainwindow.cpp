@@ -49,6 +49,17 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::MainWi
 
     /* Start timer every 100 msec (can do more, but it costs CPU time!) */
     startTimer(100, Qt::PreciseTimer);
+
+    /* Register global hotkeys for start, pause/resume, reset */
+    QxtGlobalShortcut* shortcutSplit = new QxtGlobalShortcut(this);
+    shortcutSplit->setShortcut(QKeySequence("Ctrl+Shift+F1"));
+    QxtGlobalShortcut* shortcutPause = new QxtGlobalShortcut(this);
+    shortcutPause->setShortcut(QKeySequence("Ctrl+Shift+F2"));
+    QxtGlobalShortcut* shortcutReset = new QxtGlobalShortcut(this);
+    shortcutReset->setShortcut(QKeySequence("Ctrl+Shift+F3"));
+    connect(shortcutSplit, &QxtGlobalShortcut::activated, this, &MainWindow::onSplit);
+    connect(shortcutPause, &QxtGlobalShortcut::activated, this, &MainWindow::onPause);
+    connect(shortcutReset, &QxtGlobalShortcut::activated, this, &MainWindow::onReset);
 }
 
 MainWindow::~MainWindow() {

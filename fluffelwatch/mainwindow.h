@@ -13,6 +13,8 @@
 #include "fluffeltimer.h"
 #include "splitdata.h"
 
+#include "qxt/qxtglobalshortcut.h"
+
 namespace Ui {
 class MainWindow;
 }

@@ -40,6 +40,9 @@
    <property name="toolTip">
     <string>Start or split the timer</string>
    </property>
+   <property name="shortcut">
+    <string>Ctrl+Shift+F1</string>
+   </property>
   </action>
   <action name="action_Pause">
    <property name="text">
@@ -47,6 +50,9 @@
    </property>
    <property name="toolTip">
     <string>Pause the timer</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+Shift+F2</string>
    </property>
   </action>
   <action name="action_Reset">
@@ -56,6 +62,9 @@
    <property name="toolTip">
     <string>Reset the timer</string>
    </property>
+   <property name="shortcut">
+    <string>Ctrl+Shift+F3</string>
+   </property>
   </action>
   <action name="action_Open">
    <property name="text">
@@ -64,6 +73,9 @@
    <property name="toolTip">
     <string>Opens a file with segment data</string>
    </property>
+   <property name="shortcut">
+    <string>Ctrl+O</string>
+   </property>
   </action>
   <action name="actionS_ave">
    <property name="text">
@@ -71,6 +83,9 @@
    </property>
    <property name="toolTip">
     <string>Saves the current segment data</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+S</string>
    </property>
   </action>
   <action name="actionSave_as">
