@@ -191,9 +191,13 @@ void MainWindow::timerEvent(QTimerEvent* event) {
         if (tempGameData.mission != currentGameData.mission) {
             qDebug("Mission changed from %d to %d", currentGameData.mission, tempGameData.mission);
 
-            /* Autosplit only if the new mission is larger then the previous one. Also, ignore the split from
-             * mission zero to one. */
-            if (autosplit && (tempGameData.mission > currentGameData.mission) && (currentGameData.mission != 0)) {
+            /* This can happen sometimes if we save during a mission. Ignore the reset of the mission number */
+            if ((tempGameData.mission == 0) && (currentGameData.mission > 0)) {
+                tempGameData.mission = currentGameData.mission;
+            }
+
+            /* Autosplit only if the new mission is larger then the previous one. */
+            if (autosplit && (tempGameData.mission > currentGameData.mission)) {
                 displaySegments.clear();
                 int remains = data.splitToMission(tempGameData.mission, timerReal.elapsed_with_pause());
                 int segments = data.getCurrentSegments(displaySegments, segmentLines);
