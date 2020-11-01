@@ -8,9 +8,11 @@
 #include <QMouseEvent>
 #include <QPainter>
 #include <QPaintEvent>
+#include <QProcess>
 #include <QSettings>
 
 #include "fluffeltimer.h"
+#include "fluffelmemorythread.h"
 #include "splitdata.h"
 
 #include "qxt/qxtglobalshortcut.h"
@@ -46,6 +48,9 @@ class MainWindow : public QMainWindow {
     void onSave();
     void onSaveAs();
 
+    void onConnectToAI();
+    void onDisconnectFromAI();
+
     void onExit();
 
   private:
@@ -54,6 +59,10 @@ class MainWindow : public QMainWindow {
     QSettings *settings = nullptr;
 
     void readSettings();
+
+    /* Thread for Alien Isolation connection */
+    FluffelMemoryThread memoryReaderThread;
+    QString aibinary;
 
     /* Window movement on client */
     bool isMoving = false;

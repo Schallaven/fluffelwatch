@@ -30,7 +30,8 @@ SOURCES += \
     splitdata.cpp \
     fluffeltimer.cpp \
     qxt/qxtglobalshortcut_x11.cpp \
-    qxt/qxtglobalshortcut.cpp
+    qxt/qxtglobalshortcut.cpp \
+    fluffelmemorythread.cpp
 
 HEADERS += \
         mainwindow.h \
@@ -38,7 +39,8 @@ HEADERS += \
     fluffeltimer.h \
     qxt/qxtglobalshortcut_p.h \
     qxt/qxtglobalshortcut.h \
-    qxt/xcbkeyboard.h
+    qxt/xcbkeyboard.h \
+    fluffelmemorythread.h
 
 FORMS += \
         mainwindow.ui

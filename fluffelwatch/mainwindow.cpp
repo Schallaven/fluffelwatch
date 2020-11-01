@@ -6,8 +6,10 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::MainWi
     ui->setupUi(this);
     QAction *separator1 = new QAction(this);
     QAction *separator2 = new QAction(this);
+    QAction *separator3 = new QAction(this);
     separator1->setSeparator(true);
     separator2->setSeparator(true);
+    separator3->setSeparator(true);
 
     this->addAction(ui->action_Start_Split);
     this->addAction(ui->action_Pause);
@@ -17,6 +19,9 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::MainWi
     this->addAction(ui->actionS_ave);
     this->addAction(ui->actionSave_as);
     this->addAction(separator2);
+    this->addAction(ui->actionConnect_to_Alien_Isolation);
+    this->addAction(ui->actionDisconnect_from_Alien_Isolation);
+    this->addAction(separator3);
     this->addAction(ui->action_Exit);
 
     /* Read in settings from an conf-file */
@@ -63,6 +68,11 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::MainWi
 }
 
 MainWindow::~MainWindow() {
+    /* Request exit of the thread and give it some time to exit */
+    memoryReaderThread.requestInterruption();
+    QThread::msleep(500);
+
+    /* Destroy everything */
     delete ui;
 }
 
@@ -296,6 +306,69 @@ void MainWindow::onSaveAs()
     data.saveData(filename);
 }
 
+void MainWindow::onConnectToAI()
+{
+    qDebug("Connecting to AI");
+
+    if (memoryReaderThread.isRunning()) {
+        qDebug("Already running, need to disconnect first.");
+        return;
+    }
+
+    /* First, let's simply run "ps aux" to get an overview over all processes */
+    QProcess ps;
+    ps.start( "ps", { "-eo", "pid,command" } );
+
+    /* Something went wrong here ... better not continue */
+    if ( !ps.waitForFinished( -1 ) ) {
+        qDebug("Error while running ps aux");
+        return;
+    }
+
+    /* Read all output and parse it */
+    QByteArray output = ps.readAllStandardOutput();
+    QList<QByteArray> lines = output.split('\n');
+
+    int processid = 0;
+    for(int i = 0; i < lines.size(); ++i) {
+        /* The output is basically in the format of
+         *  1234 /usr/bin/program -params
+         * So, we are checking the second column for the right binary
+         * and take then the process ID from the first column. */
+        QString lineData(lines[i]);
+        QList<QString> columns = lineData.split(' ', QString::SkipEmptyParts);
+
+        if (columns.size() < 2) {
+            continue;
+        }
+
+        /* Is this the binary we are looking for? */
+        if (columns[1].compare(aibinary) == 0) {
+            processid = columns[0].toInt();
+            qDebug("Found it! PID: %d", processid);
+            break;
+        }
+    }
+
+    /* Set the process ID to the Memory Thread and start it */
+    memoryReaderThread.setProcessID(processid);
+    memoryReaderThread.start();
+}
+
+void MainWindow::onDisconnectFromAI()
+{
+    qDebug("Disconnecting");
+
+    if (!memoryReaderThread.isRunning()) {
+        qDebug("Is not running, so nothing to disconnect from.");
+        return;
+    }
+
+    memoryReaderThread.requestInterruption();
+    QThread::msleep(500);
+    memoryReaderThread.setProcessID(0);
+}
+
 void MainWindow::onExit() {
     this->close();
 }
@@ -305,6 +378,12 @@ void MainWindow::readSettings() {
     backgroundBrush = QBrush(QColor(settings->value("backgroundColor", "#000000").toString()));
     penSeparator = QPen(QColor(settings->value("separatorColor", "#666666").toString()));
     marginSize = settings->value("marginSize", 0).toInt();
+
+    /* Get binary file/path of Alien Isolation */
+    aibinary = settings->value("aibinary").toString();
+    if (aibinary.startsWith ("~/")) {
+        aibinary.replace (0, 1, QDir::homePath());
+    }
 
     /* Title settings */
     fontTitle.fromString(settings->value("titleFont", QFont("Arial", 22, QFont::Bold).toString()).toString());
