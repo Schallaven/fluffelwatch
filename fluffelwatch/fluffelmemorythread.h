@@ -13,7 +13,8 @@ class FluffelMemoryThread : public QThread {
     void run() override;
 
     int getProcessID() const;
-    void setProcessID(int value);
+    void setProcessID(int value);    
+    bool isConnected() const;
 
     struct gameData {
         int gamestate = 0;
@@ -23,13 +24,26 @@ class FluffelMemoryThread : public QThread {
 
     gameData getData() const;
 
-    /* Some static function for convenience and interpretation */
+    enum loadingStates {
+        loadingNone = 0,
+        loadingPressingEnter = 1,
+        loadingCircle = 256
+    };
 
+    enum gameStates {
+        gameRunning = 0,
+        gamePaused = 1,
+        gameDead = 2,
+        gameLoadingSave = 8,
+        gamePlayingCinematic = 16,
+        gameMenu = 1024,
+        gameMainMenu = 32768
+    };
 
   private:
     /* The process ID for Alien Isolation. An ID of zero means
      * simulation mode. */
-    int processID = 0;
+    int processID = 0;    
 
     /* Mutex for accessing the data */
     QMutex accessMutex;
@@ -49,7 +63,7 @@ class FluffelMemoryThread : public QThread {
 
     /* Only addresses for Pause and Mission number are fixed. Gamestate and loading icon
      * need to be read out manually */
-    int addresses[tokenNUMBER] = {0, 0, 0, 0x383f571, 0x402896f };
+    qint64 addresses[tokenNUMBER] = {0};
     void initAddresses();
 
     /* Memory functions */

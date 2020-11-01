@@ -50,6 +50,7 @@ class MainWindow : public QMainWindow {
 
     void onConnectToAI();
     void onDisconnectFromAI();
+    void onToggleAutosplit(bool enable);
 
     void onExit();
 
@@ -63,6 +64,9 @@ class MainWindow : public QMainWindow {
     /* Thread for Alien Isolation connection */
     FluffelMemoryThread memoryReaderThread;
     QString aibinary;
+    bool autosplit = false;
+
+    static int getPIDofAI(const QString &binary);
 
     /* Window movement on client */
     bool isMoving = false;
@@ -110,6 +114,10 @@ class MainWindow : public QMainWindow {
     };
     QIcon iconStates[iconCOUNT];
     bool gameStates[iconCOUNT] = {false};
+
+    void updateIcons(const FluffelMemoryThread::gameData& newdata);
+
+    FluffelMemoryThread::gameData currentGameData;
 
     int segmentLines;
     QSize segmentSize;

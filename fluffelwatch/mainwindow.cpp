@@ -1,6 +1,9 @@
 #include "mainwindow.h"
 #include "ui_mainwindow.h"
 
+#include <unistd.h>
+#include <sys/types.h>
+
 MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::MainWindow) {
     /* Setup UI including action context menu */
     ui->setupUi(this);
@@ -14,6 +17,7 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::MainWi
     this->addAction(ui->action_Start_Split);
     this->addAction(ui->action_Pause);
     this->addAction(ui->action_Reset);
+    this->addAction(ui->actionAutosplit_between_missions);
     this->addAction(separator1);
     this->addAction(ui->action_Open);
     this->addAction(ui->actionS_ave);
@@ -21,6 +25,11 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::MainWi
     this->addAction(separator2);
     this->addAction(ui->actionConnect_to_Alien_Isolation);
     this->addAction(ui->actionDisconnect_from_Alien_Isolation);
+    /* User is not root? then disable the commands here */
+    if (geteuid() != 0) {
+        ui->actionConnect_to_Alien_Isolation->setDisabled(true);
+        ui->actionDisconnect_from_Alien_Isolation->setDisabled(true);
+    }
     this->addAction(separator3);
     this->addAction(ui->action_Exit);
 
@@ -158,6 +167,50 @@ void MainWindow::paintEvent(QPaintEvent* event) {
 void MainWindow::timerEvent(QTimerEvent* event) {
     Q_UNUSED(event)
 
+    /* Process new information */
+    if (memoryReaderThread.isRunning()) {
+        /* Let's get the data into a temporary buffer */
+        FluffelMemoryThread::gameData tempGameData = memoryReaderThread.getData();
+
+        /* Check if gamestate and/or loading changed to adapt the icon states */
+        if ((tempGameData.gamestate != currentGameData.gamestate) || (tempGameData.loading != currentGameData.loading)) {
+            updateIcons(tempGameData);
+        }
+
+        /* If loading changed, then we might want to either pause or resume the adjusted timer */
+        if (tempGameData.loading != currentGameData.loading) {
+            if (tempGameData.loading == FluffelMemoryThread::loadingCircle) {
+                timerAdjusted.pause();
+            } else if (tempGameData.loading != FluffelMemoryThread::loadingCircle) {
+                timerAdjusted.resume();
+            }
+        }
+
+        /* Mission number changed, we skip forward into our split data until the first entry with
+         * this mission id is visible */
+        if (tempGameData.mission != currentGameData.mission) {
+            qDebug("Mission changed from %d to %d", currentGameData.mission, tempGameData.mission);
+
+            /* Autosplit only if the new mission is larger then the previous one. Also, ignore the split from
+             * mission zero to one. */
+            if (autosplit && (tempGameData.mission > currentGameData.mission) && (currentGameData.mission != 0)) {
+                displaySegments.clear();
+                int remains = data.splitToMission(tempGameData.mission, timerReal.elapsed_with_pause());
+                int segments = data.getCurrentSegments(displaySegments, segmentLines);
+                qDebug("Got %d segments from data object. %d remaining segments.", segments, remains);
+
+                /* Stop the timer if that was the last split */
+                if (remains == 0) {
+                    timerReal.pause();
+                    timerAdjusted.pause();
+                }
+            }
+        }
+
+        /* Save game data */
+        currentGameData = tempGameData;
+    }
+
     /* Update the display */
     update();
 }
@@ -177,7 +230,7 @@ void MainWindow::onSplit() {
     displaySegments.clear();
     int remains = data.split(timerReal.elapsed_with_pause());
     int segments = data.getCurrentSegments(displaySegments, segmentLines);
-    qDebug("Got %d segments from data object", segments);
+    qDebug("Got %d segments from data object. %d remaining segments.", segments, remains);
 
     /* Stop the timer if that was the last split */
     if (remains == 0) {
@@ -231,8 +284,7 @@ void MainWindow::onReset() {
     qDebug("Got %d segments from data object", segments);
 }
 
-void MainWindow::onOpen()
-{
+void MainWindow::onOpen() {
     qDebug("open");
 
     /* Pause timer so they do not continue running */
@@ -270,8 +322,7 @@ void MainWindow::onOpen()
     calculateRegionSizes();
 }
 
-void MainWindow::onSave()
-{
+void MainWindow::onSave() {
     qDebug("save");
 
     /* Pause timer so they do not continue running */
@@ -289,8 +340,7 @@ void MainWindow::onSave()
     }
 }
 
-void MainWindow::onSaveAs()
-{
+void MainWindow::onSaveAs() {
     qDebug("saveas");
 
     /* Pause timer so they do not continue running */
@@ -306,8 +356,7 @@ void MainWindow::onSaveAs()
     data.saveData(filename);
 }
 
-void MainWindow::onConnectToAI()
-{
+void MainWindow::onConnectToAI() {
     qDebug("Connecting to AI");
 
     if (memoryReaderThread.isRunning()) {
@@ -315,48 +364,22 @@ void MainWindow::onConnectToAI()
         return;
     }
 
-    /* First, let's simply run "ps aux" to get an overview over all processes */
-    QProcess ps;
-    ps.start( "ps", { "-eo", "pid,command" } );
+    /* If the aibinary is given as PID then simply use it. Otherwise,
+     * find the binary in the running processes. */
+    int processid = aibinary.toInt();
 
-    /* Something went wrong here ... better not continue */
-    if ( !ps.waitForFinished( -1 ) ) {
-        qDebug("Error while running ps aux");
-        return;
-    }
-
-    /* Read all output and parse it */
-    QByteArray output = ps.readAllStandardOutput();
-    QList<QByteArray> lines = output.split('\n');
-
-    int processid = 0;
-    for(int i = 0; i < lines.size(); ++i) {
-        /* The output is basically in the format of
-         *  1234 /usr/bin/program -params
-         * So, we are checking the second column for the right binary
-         * and take then the process ID from the first column. */
-        QString lineData(lines[i]);
-        QList<QString> columns = lineData.split(' ', QString::SkipEmptyParts);
-
-        if (columns.size() < 2) {
-            continue;
-        }
-
-        /* Is this the binary we are looking for? */
-        if (columns[1].compare(aibinary) == 0) {
-            processid = columns[0].toInt();
-            qDebug("Found it! PID: %d", processid);
-            break;
-        }
+    if (processid == 0) {
+        processid = getPIDofAI(aibinary);
     }
 
     /* Set the process ID to the Memory Thread and start it */
     memoryReaderThread.setProcessID(processid);
     memoryReaderThread.start();
+    currentGameData = FluffelMemoryThread::gameData();
+    updateIcons(currentGameData);
 }
 
-void MainWindow::onDisconnectFromAI()
-{
+void MainWindow::onDisconnectFromAI() {
     qDebug("Disconnecting");
 
     if (!memoryReaderThread.isRunning()) {
@@ -367,6 +390,31 @@ void MainWindow::onDisconnectFromAI()
     memoryReaderThread.requestInterruption();
     QThread::msleep(500);
     memoryReaderThread.setProcessID(0);
+    currentGameData = FluffelMemoryThread::gameData();
+    updateIcons(currentGameData);
+}
+
+void MainWindow::onToggleAutosplit(bool enable)
+{
+    displaySegments.clear();
+    int remains = data.splitToMission(20, timerReal.elapsed_with_pause());
+    int segments = data.getCurrentSegments(displaySegments, segmentLines);
+    qDebug("Got %d segments from data object. %d remaining segments.", segments, remains);
+
+    /* Stop the timer if that was the last split */
+    if (remains == 0) {
+        timerReal.pause();
+        timerAdjusted.pause();
+    }
+
+
+    if (enable) {
+        qDebug("Enabled autosplit");
+    } else {
+        qDebug("Disabled autosplit");
+    }
+
+    autosplit = enable;
 }
 
 void MainWindow::onExit() {
@@ -384,6 +432,8 @@ void MainWindow::readSettings() {
     if (aibinary.startsWith ("~/")) {
         aibinary.replace (0, 1, QDir::homePath());
     }
+    /* Autosplit (will automatically set the boolean through the toggle slot) */
+    ui->actionAutosplit_between_missions->setChecked(settings->value("autosplit", false).toBool());
 
     /* Title settings */
     fontTitle.fromString(settings->value("titleFont", QFont("Arial", 22, QFont::Bold).toString()).toString());
@@ -408,6 +458,58 @@ void MainWindow::readSettings() {
     fontAdjustedTimer.fromString(settings->value("adjustedTimerFont", QFont("Arial", 22, QFont::Bold).toString()).toString());
     penAdjustedTimer = QPen(QColor(settings->value("adjustedTimerColor", "#22cc22").toString()));
     iconSize = settings->value("iconSize", 40).toInt();
+}
+
+int MainWindow::getPIDofAI(const QString& binary) {
+    qDebug("Find by binary name");
+
+    /* First, let's simply run "ps aux" to get an overview over all processes */
+    QProcess ps;
+    ps.start( "ps", { "-eo", "pid,command" } );
+
+    /* Something went wrong here ... better not continue */
+    if ( !ps.waitForFinished( -1 ) ) {
+        qDebug("Error while running ps aux");
+        return 0;
+    }
+
+    /* Read all output and parse it */
+    QByteArray output = ps.readAllStandardOutput();
+    QList<QByteArray> lines = output.split('\n');
+
+    int processid = 0;
+    for(int i = 0; i < lines.size(); ++i) {
+        /* The output is basically in the format of
+         *  1234 /usr/bin/program -params
+         * So, we are checking the second column for the right binary
+         * and take then the process ID from the first column. */
+        QString lineData(lines[i]);
+        QList<QString> columns = lineData.split(' ', QString::SkipEmptyParts);
+
+        if (columns.size() < 2) {
+            continue;
+        }
+
+        /* Is this the binary we are looking for? */
+        QString command = lineData.left(columns[0].size()).trimmed();
+        if (command.compare(binary) == 0) {
+            processid = columns[0].toInt();
+            qDebug("Found it! PID: %d", processid);
+            break;
+        }
+    }
+
+    qDebug("AI process id: %d", processid);
+
+    return processid;
+}
+
+void MainWindow::updateIcons(const FluffelMemoryThread::gameData &newdata) {
+    gameStates[iconFluffel] = memoryReaderThread.isRunning() && memoryReaderThread.isConnected();
+    gameStates[iconLoading] = newdata.loading == 256;
+    gameStates[iconSavegame] = newdata.gamestate & FluffelMemoryThread::gameLoadingSave;
+    gameStates[iconCinema] = newdata.gamestate & FluffelMemoryThread::gamePlayingCinematic;
+    gameStates[iconDead] = newdata.gamestate & FluffelMemoryThread::gameDead;
 }
 
 void MainWindow::paintSegmentLine(QPainter& painter, QRect rect, SplitData::segment& segment) {

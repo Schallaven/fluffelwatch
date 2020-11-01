@@ -40,6 +40,7 @@ class SplitData {
 
     /* Split, returns the number of segments remaining in futureSegments */
     int split(quint64 curtime);
+    int splitToMission(int mission, quint64 curtime);
     bool canSplit() const;
     bool hasSplit() const;
 

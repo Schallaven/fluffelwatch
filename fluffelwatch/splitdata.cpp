@@ -160,7 +160,7 @@ int SplitData::getCurrentSegments(QList<SplitData::segment>& list, int lines) co
 }
 
 int SplitData::split(quint64 curtime) {
-    /* Splits the current segment using curtime. Returns true if possible, false
+    /* Splits the current segment using curtime. Returns >0 if possible and 0
      * if there is nothing more to split. */
     if (futureSegments.size() == 0) {
         return 0;
@@ -176,6 +176,44 @@ int SplitData::split(quint64 curtime) {
 
     /* Put the splitted segment to the _front_ of pastSegments to reverse the order */
     pastSegments.push_front(splitSegment);
+
+    return futureSegments.size();
+}
+
+int SplitData::splitToMission(int mission, quint64 curtime)
+{
+    qDebug("Spliting until mission %d", mission);
+
+    /* Splits the current segment using curtime. Returns >0 if possible and 0
+     * if there is nothing more to split. */
+    if (futureSegments.size() == 0) {
+        return 0;
+    }
+
+    /* If the very first element in futureSegments has already the mission number or
+     * any higher then the one we want to jump to, we do nothing. */
+    if (futureSegments.first().mission >= mission) {
+        return futureSegments.size();
+    }
+
+    /* The first element in futureSegments is the current segment and this segment
+     * should point to the mission given. Remove all others, step by step. */
+    while((futureSegments.size() > 0) && (futureSegments.first().mission != mission)) {
+        /* In contrast to the split function, we do not add times to these removed
+         * ones before we add them to the _front_ of pastSegments. Just mark them
+         * as "ran". */
+        segment splitSegment = futureSegments.takeFirst();
+
+        splitSegment.ran = true;
+
+        pastSegments.push_front(splitSegment);
+    }
+
+    /* The first one in pastSegments is now the run we add the time */
+    if (pastSegments.size() > 0) {
+        pastSegments.first().improtime = curtime - pastSegments.first().runtime;
+        pastSegments.first().runtime = curtime;
+    }
 
     return futureSegments.size();
 }

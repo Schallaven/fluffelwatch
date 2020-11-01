@@ -101,7 +101,7 @@
     <string>Connect to Alien: Isolation</string>
    </property>
    <property name="toolTip">
-    <string>Connect to a running instance of Alien Isolation </string>
+    <string>Connect to a running instance of Alien Isolation (requires superuser permission)</string>
    </property>
   </action>
   <action name="actionDisconnect_from_Alien_Isolation">
@@ -109,7 +109,18 @@
     <string>Disconnect from Alien Isolation</string>
    </property>
    <property name="toolTip">
-    <string>Disconnect from the current instance of Alien Isolation</string>
+    <string>Disconnect from the current instance of Alien Isolation (requires superuser permission)</string>
+   </property>
+  </action>
+  <action name="actionAutosplit_between_missions">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Autosplit between missions</string>
+   </property>
+   <property name="toolTip">
+    <string>Split when mission number increments</string>
    </property>
   </action>
  </widget>
@@ -260,6 +271,22 @@
     </hint>
    </hints>
   </connection>
+  <connection>
+   <sender>actionAutosplit_between_missions</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>MainWindow</receiver>
+   <slot>onToggleAutosplit(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>261</x>
+     <y>136</y>
+    </hint>
+   </hints>
+  </connection>
  </connections>
  <slots>
   <slot>onSplit()</slot>
@@ -271,5 +298,6 @@
   <slot>onSaveAs()</slot>
   <slot>onConnectToAI()</slot>
   <slot>onDisconnectFromAI()</slot>
+  <slot>onToggleAutosplit(bool)</slot>
  </slots>
 </ui>

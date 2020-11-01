@@ -30,7 +30,7 @@ bool FluffelTimer::isPaused() const {
 }
 
 void FluffelTimer::resume() {
-    if (refPauseTime == -1) {
+    if ((refPauseTime == -1) || (!isValid())) {
         return;
     }
 
