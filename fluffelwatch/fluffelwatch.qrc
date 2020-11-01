@@ -1,0 +1,14 @@
+<RCC>
+    <qresource prefix="/">
+        <file>res/fluffelicon.png</file>
+        <file>res/fluffelicon_disabled.png</file>
+        <file>res/loadingicon_disabled.png</file>
+        <file>res/loadingicon.png</file>
+        <file>res/savegameicon.png</file>
+        <file>res/savegameicon_disabled.png</file>
+        <file>res/cinemaicon_disabled.png</file>
+        <file>res/cinemaicon.png</file>
+        <file>res/deadicon_disabled.png</file>
+        <file>res/deadicon.png</file>
+    </qresource>
+</RCC>

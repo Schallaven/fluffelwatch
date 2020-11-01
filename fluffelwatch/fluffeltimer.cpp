@@ -66,13 +66,33 @@ QString FluffelTimer::toString() const {
 
     /* Transfer the milliseconds qint64 into a
      * string. */
-    qint64 time = elapsed_with_pause();
+    return FluffelTimer::getStringFromTime(elapsed_with_pause());
+}
+
+QString FluffelTimer::getStringFromTime(qint64 time) {
+    /* Transfer the milliseconds qint64 into a string. */
     int hours = time / 3600000;                                                      /* 1 hour has 3 600 000 msec */
     int minutes = (time - hours * 3600000) / 60000;                                  /* 1 minutes has 60 000 msec */
     int seconds = (time - hours * 3600000 - minutes * 60000) / 1000;                 /* 1 second has 1 000 msec */
     int per_sec = (time - hours * 3600000 - minutes * 60000 - seconds * 1000) / 100; /* a 10th of a second has 100 msecs */
 
     return QString::asprintf("%02d:%02d:%02d.%01d", hours, minutes, seconds, per_sec);
+}
+
+QString FluffelTimer::getStringFromTimeDiff(qint64 timediff) {
+    /* Transfer a time difference into a string. First we convert it to
+     * a normal time string */
+    QString timestr = FluffelTimer::getStringFromTime(qAbs(timediff));
+
+    /* Remove hours and/or minutes if the timediff is too low */
+    int remove = 0;
+    if (qAbs(timediff) < 60000) {
+        remove = 6;
+    } else if (qAbs(timediff < 3600000)) {
+        remove = 3;
+    }
+    /* The minus here is a real minus (U+2212) not a dash! */
+    return (timediff >= 0 ? "+" : "−") + timestr.mid(remove);
 }
 
 qint64 FluffelTimer::elapsed() const {

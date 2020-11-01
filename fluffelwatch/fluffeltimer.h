@@ -19,6 +19,11 @@ class FluffelTimer : public QElapsedTimer {
     qint64 elapsed_with_pause() const;
     QString toString() const;
 
+    /* Static function to convert a qint64 into a string */
+    static QString getStringFromTime(qint64 time);
+    static QString getStringFromTimeDiff(qint64 timediff);
+
+
   private:
     /* This holds the total amount of pause we did */
     qint64 pausedTime;

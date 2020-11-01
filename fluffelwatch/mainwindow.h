@@ -68,8 +68,38 @@ class MainWindow : public QMainWindow {
     QPen penAdjustedTimer;
     QSize adjustedTimerSize;
 
+    QFont fontSegmentTitle;
+    QPen penSegmentTitle;
+    QFont fontSegmentTime;
+    QPen penSegmentTime;
+
+    QFont fontSegmentDifference;
+    QPen penSegmentCurrent;
+    QPen penSegmentGained;
+    QPen penSegmentLost;
+    QPen penSegmentNewRecord;
+
     int marginSize;
     int iconSize;
+
+    /* Status icons */
+    enum icons {
+        iconFluffel = 0,
+        iconLoading = 1,
+        iconSavegame = 2,
+        iconCinema = 3,
+        iconDead = 4,
+        iconCOUNT = 5
+    };
+    QIcon iconStates[iconCOUNT];
+    bool gameStates[iconCOUNT] = {false};
+
+    int segmentLines;
+    QSize segmentSize;
+    int segmentColumnSizes[3];
+    QList<SplitData::segment> displaySegments;
+
+    void paintSegmentLine(QPainter &painter, QRect rect, SplitData::segment &segment);
 
     /* Region functions */
     QRect regionTitle;
