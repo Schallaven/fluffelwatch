@@ -7,6 +7,7 @@
 MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::MainWindow) {
     /* Setup UI including action context menu */
     ui->setupUi(this);
+
     QAction *separator1 = new QAction(this);
     QAction *separator2 = new QAction(this);
     QAction *separator3 = new QAction(this);
@@ -27,8 +28,8 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::MainWi
     this->addAction(ui->actionDisconnect_from_Alien_Isolation);
     /* User is not root? then disable the commands here */
     if (geteuid() != 0) {
-        ui->actionConnect_to_Alien_Isolation->setDisabled(true);
-        ui->actionDisconnect_from_Alien_Isolation->setDisabled(true);
+        //ui->actionConnect_to_Alien_Isolation->setDisabled(true);
+        //ui->actionDisconnect_from_Alien_Isolation->setDisabled(true);
     }
     this->addAction(separator3);
     this->addAction(ui->action_Exit);
@@ -39,7 +40,6 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::MainWi
 
     /* Borderless window with black background */
     setWindowFlags(Qt::FramelessWindowHint | Qt::WindowStaysOnTopHint);
-    setAttribute(Qt::WA_TranslucentBackground, true);
 
     /* Prepare icons */
     iconStates[iconFluffel].addFile(":/res/fluffelicon.png", QSize(), QIcon::Normal, QIcon::On);
@@ -113,6 +113,8 @@ void MainWindow::mouseReleaseEvent(QMouseEvent* event) {
 
 void MainWindow::paintEvent(QPaintEvent* event) {
     Q_UNUSED(event)
+
+    QMainWindow::paintEvent(event);
 
     QPainter painter(this);
     painter.setRenderHint(QPainter::Antialiasing);
@@ -189,11 +191,11 @@ void MainWindow::timerEvent(QTimerEvent* event) {
         /* Mission number changed, we skip forward into our split data until the first entry with
          * this mission id is visible */
         if (tempGameData.mission != currentGameData.mission) {
-            qDebug("Mission changed from %d to %d", currentGameData.mission, tempGameData.mission);
-
             /* This can happen sometimes if we save during a mission. Ignore the reset of the mission number */
             if ((tempGameData.mission == 0) && (currentGameData.mission > 0)) {
                 tempGameData.mission = currentGameData.mission;
+            } else {
+                qDebug("Mission changed from %d to %d", currentGameData.mission, tempGameData.mission);
             }
 
             /* Autosplit only if the new mission is larger then the previous one. */
@@ -422,6 +424,36 @@ void MainWindow::onToggleAutosplit(bool enable)
 }
 
 void MainWindow::onExit() {
+    /* Whatever is in the split data, save it as a temporary file with a time stamp
+     * and set it as last filename used */
+    QString filename = QDateTime::currentDateTime().toString("yyyy.MM.dd hh:mm:ss") + " " + data.getTitle() + ".conf";
+    data.saveData(filename);
+    settings->setValue("segmentdata", filename);
+
+    /* Destroy the settings here to sync it and write everything to the file. This
+     * allows us to set permissions/ownership right if needed. */
+    QString settingsname = settings->fileName();
+    delete settings;
+
+    /* Make sure that if we run Fluffelwatch as su that the ownership is still given
+     * to the current user */
+    if (geteuid() == 0) {
+        /* Get the user id that invoked sudo */
+        int uid = atoi(getenv("SUDO_UID"));
+        int gid = atoi(getenv("SUDO_GID"));
+
+        qDebug("UID %d and GID %d", uid, gid);
+
+        if (uid != 0 && gid != 0) {
+            int ret = chown(filename.toStdString().c_str(), uid, gid);
+            qDebug("Chown ret %d. %d:%d", ret, uid, gid);
+
+            ret = chown(settingsname.toStdString().c_str(), uid, gid);
+            qDebug("Chown ret %d. %d:%d", ret, uid, gid);
+        }
+    }
+
+    /* Close the window */
     this->close();
 }
 
@@ -538,7 +570,7 @@ void MainWindow::paintSegmentLine(QPainter& painter, QRect rect, SplitData::segm
                                rect.top(),
                                segmentColumnSizes[1],
                                rect.height()), Qt::AlignRight | Qt::AlignVCenter,
-                         FluffelTimer::getStringFromTimeDiff(segment.improtime));
+                         FluffelTimer::getStringFromTimeDiff(segment.totalimprotime));
     }
 
     /* Segment time (or improvement) */
@@ -553,7 +585,7 @@ void MainWindow::paintSegmentLine(QPainter& painter, QRect rect, SplitData::segm
                            rect.top(),
                            segmentColumnSizes[2],
                            rect.height()), Qt::AlignRight | Qt::AlignVCenter,
-                     FluffelTimer::getStringFromTime(segment.runtime) + " ");
+                     FluffelTimer::getStringFromTime(segment.totaltime) + " ");
 }
 
 void MainWindow::calculateRegionSizes() {

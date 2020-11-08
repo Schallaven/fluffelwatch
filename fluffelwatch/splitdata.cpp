@@ -57,10 +57,18 @@ void SplitData::loadData(const QString& filename) {
         segmentData.mission = fields.at(3).toLongLong();
 
         allSegments.push_back(segmentData);
-        futureSegments.push_back(segmentData);
     }
 
     qDebug("Loaded %d segments from file", allSegments.size());
+
+    /* Calculate the total times */
+    calculateTotalTimes(false);
+
+    /* Then copy simply the items over and renew the lists */
+    futureSegments = QList<segment>(allSegments);
+    pastSegments.clear();
+    totalPastTime = 0;
+    totalImproTime = 0;
 
     /* Close file and then copy the list to future segments */
     this->filename = filename;
@@ -159,7 +167,7 @@ int SplitData::getCurrentSegments(QList<SplitData::segment>& list, int lines) co
     return pastlines + futurelines;
 }
 
-int SplitData::split(quint64 curtime) {
+int SplitData::split(qint64 curtime) {
     /* Splits the current segment using curtime. Returns >0 if possible and 0
      * if there is nothing more to split. */
     if (futureSegments.size() == 0) {
@@ -169,19 +177,27 @@ int SplitData::split(quint64 curtime) {
     /* Take the first item of futureSegments */
     segment splitSegment = futureSegments.takeFirst();
 
+    /* Split time */
+    qint64 splittime = curtime - totalPastTime;
+
     /* Save the current time as run time and calculate the positive/negative improvement */
     splitSegment.ran = true;
-    splitSegment.improtime = curtime - splitSegment.runtime;
-    splitSegment.runtime = curtime;
+    splitSegment.improtime = splittime - splitSegment.runtime;
+    splitSegment.totalimprotime = totalImproTime + splitSegment.improtime;
+    splitSegment.runtime = splittime;
+    splitSegment.totaltime = curtime;
 
     /* Put the splitted segment to the _front_ of pastSegments to reverse the order */
     pastSegments.push_front(splitSegment);
 
+    /* Add last run time to the total past time */
+    totalPastTime += splitSegment.runtime;
+    totalImproTime += splitSegment.improtime;
+
     return futureSegments.size();
 }
 
-int SplitData::splitToMission(int mission, quint64 curtime)
-{
+int SplitData::splitToMission(int mission, qint64 curtime) {
     qDebug("Spliting until mission %d", mission);
 
     /* Splits the current segment using curtime. Returns >0 if possible and 0
@@ -211,8 +227,18 @@ int SplitData::splitToMission(int mission, quint64 curtime)
 
     /* The first one in pastSegments is now the run we add the time */
     if (pastSegments.size() > 0) {
-        pastSegments.first().improtime = curtime - pastSegments.first().runtime;
-        pastSegments.first().runtime = curtime;
+        /* Split time */
+        qint64 splittime = curtime - totalPastTime;
+
+        pastSegments.first().improtime = splittime - pastSegments.first().runtime;
+        pastSegments.first().totalimprotime = totalImproTime + pastSegments.first().improtime;
+        pastSegments.first().runtime = splittime;
+        pastSegments.first().totaltime = curtime;
+
+        /* Don't forget to add this here. Since we skipped some segments this
+         * whole last segment will have all the runtime. */
+        totalPastTime += pastSegments.first().runtime;
+        totalImproTime += pastSegments.first().improtime;
     }
 
     return futureSegments.size();
@@ -246,11 +272,16 @@ void SplitData::reset(bool merge) {
                 allSegments[i].besttime = data.runtime;
             }
         }
+
+        /* Recalculate total times */
+        calculateTotalTimes(false);
     }
 
     /* Then copy simply the items over and renew the lists */
     futureSegments = QList<segment>(allSegments);
     pastSegments.clear();
+    totalPastTime = 0;
+    totalImproTime = 0;
 
     qDebug("after reset: %d past, %d future", pastSegments.size(), futureSegments.size());
 }
@@ -274,4 +305,16 @@ int SplitData::getSegments(QList<segment>& toList, const QList<segment>& fromLis
     }
 
     return lines;
+}
+
+void SplitData::calculateTotalTimes(bool best) {
+    qint64 totaltime = 0;
+
+    for(int i = 0; i < allSegments.size(); ++i) {
+        /* Add either best or run time to the total */
+        qint64 addtime = best ? allSegments[i].besttime : allSegments[i].runtime;
+
+        totaltime = allSegments[i].totaltime = totaltime + addtime;
+        totalImproTime = allSegments[i].totalimprotime = totalImproTime + allSegments[i].improtime;
+    }
 }
