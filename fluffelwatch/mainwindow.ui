@@ -96,22 +96,6 @@
     <string>Saves the current segment data in a new file</string>
    </property>
   </action>
-  <action name="actionConnect_to_Alien_Isolation">
-   <property name="text">
-    <string>Connect to Alien: Isolation</string>
-   </property>
-   <property name="toolTip">
-    <string>Connect to a running instance of Alien Isolation (requires superuser permission)</string>
-   </property>
-  </action>
-  <action name="actionDisconnect_from_Alien_Isolation">
-   <property name="text">
-    <string>Disconnect from Alien Isolation</string>
-   </property>
-   <property name="toolTip">
-    <string>Disconnect from the current instance of Alien Isolation (requires superuser permission)</string>
-   </property>
-  </action>
   <action name="actionAutosplit_between_missions">
    <property name="checkable">
     <bool>true</bool>
@@ -228,38 +212,6 @@
    <signal>triggered()</signal>
    <receiver>MainWindow</receiver>
    <slot>onSaveAs()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>-1</x>
-     <y>-1</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>261</x>
-     <y>136</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>actionConnect_to_Alien_Isolation</sender>
-   <signal>triggered()</signal>
-   <receiver>MainWindow</receiver>
-   <slot>onConnectToAI()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>-1</x>
-     <y>-1</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>261</x>
-     <y>136</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>actionDisconnect_from_Alien_Isolation</sender>
-   <signal>triggered()</signal>
-   <receiver>MainWindow</receiver>
-   <slot>onDisconnectFromAI()</slot>
    <hints>
     <hint type="sourcelabel">
      <x>-1</x>

@@ -5,6 +5,7 @@
 #include <QFileDialog>
 #include <QFontMetrics>
 #include <QMainWindow>
+#include <QMap>
 #include <QMessageBox>
 #include <QMouseEvent>
 #include <QPainter>
@@ -58,7 +59,23 @@ class MainWindow : public QMainWindow {
     Ui::MainWindow *ui;
     QSettings *settings = nullptr;
 
+    void setupContextMenu();
+
+    /* Settings are saved here mostly as maps that can be accessed
+     * by a convenient key. The template function allows to read
+     * different types into different maps with one convenient
+     * function. */
     void readSettings();
+    void readSettingsFonts();
+    void readSettingsColors();
+    void readSettingsData();
+
+    QBrush backgroundBrush;
+    QMap<QString, QFont> userFonts;
+    QMap<QString, QPen> userColors;
+
+
+
 
     FluffelIPCThread ipcthread;
 
@@ -75,27 +92,10 @@ class MainWindow : public QMainWindow {
     FluffelTimer timerAdjusted;
 
     /* Painting brushes, pens, and fonts */
-    QBrush backgroundBrush;
-    QPen penSeparator;
-    QFont fontTitle;
-    QPen penTitle;
-    QFont fontMainTimer;
-    QPen penMainTimer;
-    QSize mainTimerSize;
-    QFont fontAdjustedTimer;
-    QPen penAdjustedTimer;
+
+
     QSize adjustedTimerSize;
-
-    QFont fontSegmentTitle;
-    QPen penSegmentTitle;
-    QFont fontSegmentTime;
-    QPen penSegmentTime;
-
-    QFont fontSegmentDifference;
-    QPen penSegmentCurrent;
-    QPen penSegmentGained;
-    QPen penSegmentLost;
-    QPen penSegmentNewRecord;
+    QSize mainTimerSize;
 
     int marginSize;
     int iconSize;

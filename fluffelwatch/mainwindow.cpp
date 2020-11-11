@@ -6,31 +6,14 @@
 #include <sys/types.h>
 
 MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::MainWindow) {
-    /* Setup UI including action context menu */
+    /* Setup UI with a border less window and an action context menu */
     ui->setupUi(this);
-
-    QAction *separator1 = new QAction(this);
-    QAction *separator2 = new QAction(this);
-    separator1->setSeparator(true);
-    separator2->setSeparator(true);
-
-    this->addAction(ui->action_Start_Split);
-    this->addAction(ui->action_Pause);
-    this->addAction(ui->action_Reset);
-    this->addAction(ui->actionAutosplit_between_missions);
-    this->addAction(separator1);
-    this->addAction(ui->action_Open);
-    this->addAction(ui->actionS_ave);
-    this->addAction(ui->actionSave_as);
-    this->addAction(separator2);
-    this->addAction(ui->action_Exit);
+    setWindowFlags(Qt::FramelessWindowHint | Qt::WindowStaysOnTopHint);
+    setupContextMenu();
 
     /* Read in settings from an conf-file */
     settings = new QSettings("fluffelwatch.conf", QSettings::NativeFormat);
     readSettings();
-
-    /* Borderless window with black background */
-    setWindowFlags(Qt::FramelessWindowHint | Qt::WindowStaysOnTopHint);
 
     /* Prepare icons */
     iconStates[iconFluffel].addFile(":/res/fluffelicon.png", QSize(), QIcon::Normal, QIcon::On);
@@ -43,11 +26,6 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::MainWi
     iconStates[iconCinema].addFile(":/res/cinemaicon_disabled.png", QSize(), QIcon::Disabled, QIcon::On);
     iconStates[iconDead].addFile(":/res/deadicon.png", QSize(), QIcon::Normal, QIcon::On);
     iconStates[iconDead].addFile(":/res/deadicon_disabled.png", QSize(), QIcon::Disabled, QIcon::On);
-
-    /* Load split data */
-    data.loadData(settings->value("segmentdata").toString());
-    int segments = data.getCurrentSegments(displaySegments, segmentLines);
-    qDebug("Got %d segments from data object", segments);
 
     /* Calculate the region and window size */
     calculateRegionSizes();
@@ -73,7 +51,7 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::MainWi
 
 MainWindow::~MainWindow() {
     /* Request exit of the thread and give it some time to exit */
-    ipcthread.requestInterruption();    
+    ipcthread.requestInterruption();
     QThread::msleep(ipcthread.timeout * 2);
 
     /* Destroy everything */
@@ -120,11 +98,11 @@ void MainWindow::paintEvent(QPaintEvent* event) {
     painter.drawRect(this->rect());
 
     /* Title */
-    painter.setFont(fontTitle);
-    painter.setPen(penTitle);
+    painter.setFont(userFonts["mainTitle"]);
+    painter.setPen(userColors["mainTitle"]);
     painter.drawText(regionTitle, Qt::AlignHCenter | Qt::AlignVCenter, data.getTitle());
 
-    painter.setPen(penSeparator);
+    painter.setPen(userColors["separatorLine"]);
     painter.drawLine(regionTitle.bottomLeft(), regionTitle.bottomRight());
 
     /* Time list */
@@ -136,7 +114,7 @@ void MainWindow::paintEvent(QPaintEvent* event) {
                                         segmentSize.height()), displaySegments[i]);
     }
 
-    painter.setPen(penSeparator);
+    painter.setPen(userColors["separatorLine"]);
     painter.drawLine(regionTimeList.bottomLeft(), regionTimeList.bottomRight());
 
     /* Status bar: 5 icons + two timers */
@@ -145,15 +123,15 @@ void MainWindow::paintEvent(QPaintEvent* event) {
                             Qt::AlignCenter, gameStates[i] ? QIcon::Normal : QIcon::Disabled);
     }
 
-    painter.setFont(fontMainTimer);
-    painter.setPen(penMainTimer);
+    painter.setFont(userFonts["realTimer"]);
+    painter.setPen(userColors["realTimer"]);
     painter.drawText(QRect(regionStatus.right() - mainTimerSize.width() - marginSize,
                            regionStatus.top() + marginSize,
                            mainTimerSize.width(),
                            mainTimerSize.height()), Qt::AlignRight | Qt::AlignVCenter, timerReal.toString());
 
-    painter.setFont(fontAdjustedTimer);
-    painter.setPen(penAdjustedTimer);
+    painter.setFont(userFonts["ingameTimer"]);
+    painter.setPen(userColors["ingameTimer"]);
     painter.drawText(QRect(regionStatus.right() - adjustedTimerSize.width() - marginSize,
                            regionStatus.bottom() - adjustedTimerSize.height() - marginSize,
                            adjustedTimerSize.width(),
@@ -371,8 +349,7 @@ void MainWindow::onSaveAs() {
     data.saveData(filename);
 }
 
-void MainWindow::onToggleAutosplit(bool enable)
-{
+void MainWindow::onToggleAutosplit(bool enable) {
     displaySegments.clear();
     int remains = data.splitToMission(20, timerReal.elapsed_with_pause());
     int segments = data.getCurrentSegments(displaySegments, segmentLines);
@@ -395,6 +372,9 @@ void MainWindow::onToggleAutosplit(bool enable)
 }
 
 void MainWindow::onExit() {
+    this->close();
+    return;
+
     /* Whatever is in the split data, save it as a temporary file with a time stamp
      * and set it as last filename used */
     QString filename = QDateTime::currentDateTime().toString("yyyy.MM.dd hh:mm:ss") + " " + data.getTitle() + ".conf";
@@ -437,40 +417,97 @@ void MainWindow::onExit() {
     this->close();
 }
 
+void MainWindow::setupContextMenu() {
+    QAction *separator1 = new QAction(this);
+    QAction *separator2 = new QAction(this);
+    separator1->setSeparator(true);
+    separator2->setSeparator(true);
+
+    this->addAction(ui->action_Start_Split);
+    this->addAction(ui->action_Pause);
+    this->addAction(ui->action_Reset);
+    this->addAction(ui->actionAutosplit_between_missions);
+    this->addAction(separator1);
+    this->addAction(ui->action_Open);
+    this->addAction(ui->actionS_ave);
+    this->addAction(ui->actionSave_as);
+    this->addAction(separator2);
+    this->addAction(ui->action_Exit);
+}
+
 void MainWindow::readSettings() {
-    /* Main window / general settings */
-    backgroundBrush = QBrush(QColor(settings->value("backgroundColor", "#000000").toString()));
-    penSeparator = QPen(QColor(settings->value("separatorColor", "#666666").toString()));
+    /* Read font and color settings into maps for convenient access */
+    readSettingsFonts();
+    readSettingsColors();
+    backgroundBrush = QBrush(userColors["background"].color());
+
+    /* General settings */
     marginSize = settings->value("marginSize", 0).toInt();
+    segmentLines = qMax(2, settings->value("segmentLines").toInt());
+    iconSize = settings->value("iconSize", 40).toInt();
 
     /* Autosplit (will automatically set the boolean through the toggle slot) */
     ui->actionAutosplit_between_missions->setChecked(settings->value("autosplit", false).toBool());
 
-    /* Title settings */
-    fontTitle.fromString(settings->value("titleFont", QFont("Arial", 22, QFont::Bold).toString()).toString());
-    penTitle = QPen(QColor(settings->value("titleColor", "#f0b012").toString()));
-
-    /* Segment settings */
-    segmentLines = qMax(2, settings->value("segmentLines").toInt());
-    fontSegmentTitle.fromString(settings->value("segmentTitleFont", QFont("Arial", 18, QFont::Bold).toString()).toString());
-    penSegmentTitle = QPen(QColor(settings->value("segmentTitleColor", "#c0c0c0").toString()));
-    fontSegmentTime.fromString(settings->value("segmentTimeFont", QFont("Arial", 18, QFont::Bold).toString()).toString());
-    penSegmentTime = QPen(QColor(settings->value("segmentTimeColor", "#ffffff").toString()));
-
-    fontSegmentDifference.fromString(settings->value("segmentDifferenceFont", QFont("Arial", 14, QFont::Bold).toString()).toString());
-    penSegmentCurrent = QPen(QColor(settings->value("segmentCurrentColor", "#33ff00").toString()));
-    penSegmentGained = QPen(QColor(settings->value("segmentGainedColor", "#6295fc").toString()));
-    penSegmentLost = QPen(QColor(settings->value("segmentLostColor", "#e82323").toString()));
-    penSegmentNewRecord = QPen(QColor(settings->value("segmentNewRecordColor", "#ffff99").toString()));
-
-    /* Timer/Status settings */
-    fontMainTimer.fromString(settings->value("mainTimerFont", QFont("Arial", 28, QFont::Bold).toString()).toString());
-    penMainTimer = QPen(QColor(settings->value("mainTimerColor", "#22cc22").toString()));
-    fontAdjustedTimer.fromString(settings->value("adjustedTimerFont", QFont("Arial", 22, QFont::Bold).toString()).toString());
-    penAdjustedTimer = QPen(QColor(settings->value("adjustedTimerColor", "#22cc22").toString()));
-    iconSize = settings->value("iconSize", 40).toInt();
+    /* Read the segment and food data if available */
+    readSettingsData();
 }
 
+void MainWindow::readSettingsFonts() {
+    /* Get all keys from the fonts group */
+    settings->beginGroup("Fonts");
+    QStringList keys = settings->allKeys();
+
+    /* Iterate over each key and create an entry in the map. The value is read into a string
+     * and then converted to a QFont by fromString. */
+    for(int i = 0; i < keys.size(); ++i) {
+        QFont value;
+
+        if (value.fromString(settings->value(keys[i], QFont("Arial", 18, QFont::Bold).toString()).toString())) {
+            userFonts.insert(keys[i], value);
+        }
+    }
+
+    /* Reset the group */
+    settings->endGroup();
+}
+
+void MainWindow::readSettingsColors() {
+    /* Read the keys and settings from the colors group */
+    settings->beginGroup("Colors");
+    QStringList keys = settings->allKeys();
+
+    /* Iterate over each key and create an entry in the map. The value is read into a string
+     * and then converted to QColor. With this color a pen is created for convenience of all
+     * drawing functions. If really only the color is needed (such as in the case of the
+     * background), simply use userColors["background"].color(). */
+    for(int i = 0; i < keys.size(); ++i) {
+        QColor value = QColor(settings->value(keys[i], "#fefefe").toString());
+
+        userColors.insert(keys[i], QPen(value));
+    }
+
+    /* Reset the group */
+    settings->endGroup();
+}
+
+void MainWindow::readSettingsData() {
+    /* Read the segment data as well as the current fluffelfood data in */
+    settings->beginGroup("Data");
+
+    QString segmentData = settings->value("segmentData").toString();
+    QString foodData = settings->value("foodData").toString();
+
+    qDebug("Segment data loaded from... %s", segmentData.toStdString().c_str());
+    qDebug("Food data loaded from... %s", foodData.toStdString().c_str());
+
+    /* Load segment data */
+    data.loadData(segmentData);
+    int segments = data.getCurrentSegments(displaySegments, segmentLines);
+    qDebug("Got %d segments from data object", segments);
+
+    settings->endGroup();
+}
 
 void MainWindow::updateIcons(const FluffelIPCThread::listenerData& newdata) {
     gameStates[iconFluffel] = true;
@@ -482,20 +519,20 @@ void MainWindow::updateIcons(const FluffelIPCThread::listenerData& newdata) {
 
 void MainWindow::paintSegmentLine(QPainter& painter, QRect rect, SplitData::segment& segment) {
     /* Segment title */
-    painter.setFont(fontSegmentTitle);
-    painter.setPen(penSegmentTitle);
+    painter.setFont(userFonts["segmentTitle"]);
+    painter.setPen(userColors["segmentTitle"]);
     if (segment.current && timerReal.isValid()) {
-        painter.setPen(penSegmentCurrent);
+        painter.setPen(userColors["currentSegment"]);
     }
     painter.drawText(rect, Qt::AlignLeft | Qt::AlignVCenter, segment.title);
 
     /* Segment diff time (if it exists) */
     if (segment.ran) {
-        painter.setFont(fontSegmentDifference);
+        painter.setFont(userFonts["segmentDiff"]);
         if (segment.improtime < 0) {
-            painter.setPen(penSegmentGained);
+            painter.setPen(userColors["gainedTime"]);
         } else if (segment.improtime > 0 ) {
-            painter.setPen(penSegmentLost);
+            painter.setPen(userColors["lostTime"]);
         }
 
         painter.drawText(QRect(rect.right() - segmentColumnSizes[2] - segmentColumnSizes[1] - marginSize * 2,
@@ -506,11 +543,11 @@ void MainWindow::paintSegmentLine(QPainter& painter, QRect rect, SplitData::segm
     }
 
     /* Segment time (or improvement) */
-    painter.setFont(fontSegmentTime);
+    painter.setFont(userFonts["segmentTime"]);
     if (segment.ran && (segment.runtime < segment.besttime)) {
-        painter.setPen(penSegmentNewRecord);
+        painter.setPen(userColors["newRecord"]);
     } else if (!segment.ran && !segment.current) {
-        painter.setPen(penSegmentTime);
+        painter.setPen(userColors["segmentTime"]);
     }
     QString time = FluffelTimer::getStringFromTime(segment.runtime) + " ";
     painter.drawText(QRect(rect.right() - segmentColumnSizes[2] - marginSize * 2,
@@ -522,14 +559,14 @@ void MainWindow::paintSegmentLine(QPainter& painter, QRect rect, SplitData::segm
 
 void MainWindow::calculateRegionSizes() {
     /* Calculate title region */
-    QFontMetrics fm(fontTitle);
+    QFontMetrics fm(userFonts["mainTitle"]);
     regionTitle = QRect(QPoint(0, 0), fm.size(Qt::TextSingleLine, data.getTitle()));
     regionTitle.adjust(0, 0, marginSize * 2, marginSize * 2);
 
     /* Calculate time list region */
-    QFontMetrics segTitle(fontSegmentTitle);
-    QFontMetrics segDiff(fontSegmentDifference);
-    QFontMetrics segTime(fontSegmentTime);
+    QFontMetrics segTitle(userFonts["segmentTitle"]);
+    QFontMetrics segDiff(userFonts["segmentDiff"]);
+    QFontMetrics segTime(userFonts["segmentTime"]);
     QSize sizeTitle = segTitle.size(Qt::TextSingleLine, data.getLongestSegmentTitle());
     segmentColumnSizes[0] = sizeTitle.width();
     QSize sizeDiff = segDiff.size(Qt::TextSingleLine, " −00:00:00.0 ");
@@ -543,10 +580,10 @@ void MainWindow::calculateRegionSizes() {
     regionTimeList.adjust(0, 0, marginSize * 2, marginSize * 2);
 
     /* Calculate status bar (with the two timers) */
-    QFontMetrics mtFm(fontMainTimer);
+    QFontMetrics mtFm(userFonts["realTimer"]);
     mainTimerSize = mtFm.size(Qt::TextSingleLine, "00:00:00.0");
 
-    QFontMetrics atFm(fontAdjustedTimer);
+    QFontMetrics atFm(userFonts["ingameTimer"]);
     adjustedTimerSize = atFm.size(Qt::TextSingleLine, "00:00:00.0");
 
     QSize iconArea = QSize(5 * iconSize, iconSize);
@@ -570,3 +607,5 @@ void MainWindow::calculateRegionSizes() {
     segmentSize.setWidth(maxWidth);
     regionStatus.setWidth(maxWidth);
 }
+
+
