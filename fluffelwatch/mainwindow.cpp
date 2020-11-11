@@ -2,6 +2,7 @@
 #include "ui_mainwindow.h"
 
 #include <unistd.h>
+#include <sys/ptrace.h>
 #include <sys/types.h>
 
 MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::MainWindow) {
@@ -174,6 +175,17 @@ void MainWindow::timerEvent(QTimerEvent* event) {
         /* Let's get the data into a temporary buffer */
         FluffelMemoryThread::gameData tempGameData = memoryReaderThread.getData();
 
+        /* Add measurement if neccessary */
+        if ((tempGameData.gamestate != currentGameData.gamestate) || (tempGameData.loading != currentGameData.loading) ||
+                (tempGameData.mission != currentGameData.mission)) {
+            measureList.append(QString("%1\t%2\t%3\t%4\t%5")
+                               .arg(FluffelTimer::getStringFromTime(timerReal.elapsed_with_pause()))
+                               .arg(timerReal.elapsed_with_pause())
+                               .arg(tempGameData.mission)
+                               .arg(tempGameData.loading)
+                               .arg(tempGameData.gamestate));
+        }
+
         /* Check if gamestate and/or loading changed to adapt the icon states */
         if ((tempGameData.gamestate != currentGameData.gamestate) || (tempGameData.loading != currentGameData.loading)) {
             updateIcons(tempGameData);
@@ -253,7 +265,7 @@ void MainWindow::onPause() {
     }
 
     /* Check if paused or not */
-    if (timerReal.isPaused()) {
+    if (timerReal.isPaused() && timerAdjusted.isPaused()) {
         qDebug("resume");
         timerReal.resume();
         timerAdjusted.resume();
@@ -288,6 +300,9 @@ void MainWindow::onReset() {
     data.reset(merge);
     int segments = data.getCurrentSegments(displaySegments, segmentLines);
     qDebug("Got %d segments from data object", segments);
+
+    measureList.clear();
+    qDebug("Cleared measurement list");
 }
 
 void MainWindow::onOpen() {
@@ -452,6 +467,15 @@ void MainWindow::onExit() {
             qDebug("Chown ret %d. %d:%d", ret, uid, gid);
         }
     }
+
+    /* Save measurements */
+    qDebug("Saving %d measurements", measureList.size());
+    QFile measurements("measurements.txt");
+    measurements.open(QFile::WriteOnly|QFile::Truncate|QFile::Text);
+    QTextStream out(&measurements);
+    QString toWrite = measureList.join("\n");
+    measurements.write(toWrite.toUtf8());
+    measurements.close();
 
     /* Close the window */
     this->close();

@@ -125,6 +125,8 @@ class MainWindow : public QMainWindow {
     int segmentColumnSizes[3];
     QList<SplitData::segment> displaySegments;
 
+    QStringList measureList;
+
     void paintSegmentLine(QPainter &painter, QRect rect, SplitData::segment &segment);
 
     /* Region functions */

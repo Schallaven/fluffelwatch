@@ -1,5 +1,7 @@
 #include "fluffelmemorythread.h"
 
+#include <sys/uio.h>
+
 FluffelMemoryThread::FluffelMemoryThread() {
 
 }
@@ -11,7 +13,7 @@ FluffelMemoryThread::~FluffelMemoryThread() {
 void FluffelMemoryThread::run() {
     /* First open memory then init addresses! */
     if (!openMemory()) {
-        qDebug("Could not open memory");
+        qDebug("Could not open memory. Error: %s", memFile.errorString().toStdString().c_str());
         return;
     }
 
@@ -100,6 +102,11 @@ qint64 FluffelMemoryThread::readMemory(qint64 address, int length) {
         return random() % 257;
     }
 
+    /* Length should be not exceeding our "buffer" value */
+    if (length > sizeof(qint64)) {
+        return 0;
+    }
+
     /* No file opened? */
     if (!memFile.isOpen()) {
         qDebug("Memory is not opened");
@@ -114,6 +121,7 @@ qint64 FluffelMemoryThread::readMemory(qint64 address, int length) {
 
     qint64 value = 0;
     int bytesRead = 0;
+
 
     bytesRead = memFile.read((char*)(&value), length);
 
