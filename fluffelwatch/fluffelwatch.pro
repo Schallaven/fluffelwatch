@@ -4,7 +4,7 @@
 #
 #-------------------------------------------------
 
-QT       += core gui gui-private
+QT       += core gui network gui-private
 
 QMAKE_LFLAGS += -no-pie
 
@@ -33,7 +33,7 @@ SOURCES += \
     fluffeltimer.cpp \
     qxt/qxtglobalshortcut_x11.cpp \
     qxt/qxtglobalshortcut.cpp \
-    fluffelmemorythread.cpp
+    fluffelipcthread.cpp
 
 HEADERS += \
         mainwindow.h \
@@ -42,7 +42,7 @@ HEADERS += \
     qxt/qxtglobalshortcut_p.h \
     qxt/qxtglobalshortcut.h \
     qxt/xcbkeyboard.h \
-    fluffelmemorythread.h
+    fluffelipcthread.h
 
 FORMS += \
         mainwindow.ui

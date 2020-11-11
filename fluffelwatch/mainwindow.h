@@ -12,8 +12,8 @@
 #include <QProcess>
 #include <QSettings>
 
+#include "fluffelipcthread.h"
 #include "fluffeltimer.h"
-#include "fluffelmemorythread.h"
 #include "splitdata.h"
 
 #include "qxt/qxtglobalshortcut.h"
@@ -49,8 +49,6 @@ class MainWindow : public QMainWindow {
     void onSave();
     void onSaveAs();
 
-    void onConnectToAI();
-    void onDisconnectFromAI();
     void onToggleAutosplit(bool enable);
 
     void onExit();
@@ -62,12 +60,10 @@ class MainWindow : public QMainWindow {
 
     void readSettings();
 
-    /* Thread for Alien Isolation connection */
-    FluffelMemoryThread memoryReaderThread;
-    QString aibinary;
-    bool autosplit = false;
+    FluffelIPCThread ipcthread;
 
-    static int getPIDofAI(const QString &binary);
+    /* Options */
+    bool autosplit = false;
 
     /* Window movement on client */
     bool isMoving = false;
@@ -116,9 +112,7 @@ class MainWindow : public QMainWindow {
     QIcon iconStates[iconCOUNT];
     bool gameStates[iconCOUNT] = {false};
 
-    void updateIcons(const FluffelMemoryThread::gameData& newdata);
-
-    FluffelMemoryThread::gameData currentGameData;
+    void updateIcons(const FluffelIPCThread::listenerData& newdata);
 
     int segmentLines;
     QSize segmentSize;
