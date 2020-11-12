@@ -33,7 +33,8 @@ SOURCES += \
     fluffeltimer.cpp \
     qxt/qxtglobalshortcut_x11.cpp \
     qxt/qxtglobalshortcut.cpp \
-    fluffelipcthread.cpp
+    fluffelipcthread.cpp \
+    icondisplay.cpp
 
 HEADERS += \
         mainwindow.h \
@@ -42,7 +43,8 @@ HEADERS += \
     qxt/qxtglobalshortcut_p.h \
     qxt/qxtglobalshortcut.h \
     qxt/xcbkeyboard.h \
-    fluffelipcthread.h
+    fluffelipcthread.h \
+    icondisplay.h
 
 FORMS += \
         mainwindow.ui

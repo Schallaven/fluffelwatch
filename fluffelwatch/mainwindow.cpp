@@ -9,40 +9,19 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::MainWi
     /* Setup UI with a border less window and an action context menu */
     ui->setupUi(this);
     setWindowFlags(Qt::FramelessWindowHint | Qt::WindowStaysOnTopHint);
+
     setupContextMenu();
+    setupGlobalShortcuts();
 
     /* Read in settings from an conf-file */
     settings = new QSettings("fluffelwatch.conf", QSettings::NativeFormat);
     readSettings();
 
-    /* Prepare icons */
-    iconStates[iconFluffel].addFile(":/res/fluffelicon.png", QSize(), QIcon::Normal, QIcon::On);
-    iconStates[iconFluffel].addFile(":/res/fluffelicon_disabled.png", QSize(), QIcon::Disabled, QIcon::On);
-    iconStates[iconLoading].addFile(":/res/loadingicon.png", QSize(), QIcon::Normal, QIcon::On);
-    iconStates[iconLoading].addFile(":/res/loadingicon_disabled.png", QSize(), QIcon::Disabled, QIcon::On);
-    iconStates[iconSavegame].addFile(":/res/savegameicon.png", QSize(), QIcon::Normal, QIcon::On);
-    iconStates[iconSavegame].addFile(":/res/savegameicon_disabled.png", QSize(), QIcon::Disabled, QIcon::On);
-    iconStates[iconCinema].addFile(":/res/cinemaicon.png", QSize(), QIcon::Normal, QIcon::On);
-    iconStates[iconCinema].addFile(":/res/cinemaicon_disabled.png", QSize(), QIcon::Disabled, QIcon::On);
-    iconStates[iconDead].addFile(":/res/deadicon.png", QSize(), QIcon::Normal, QIcon::On);
-    iconStates[iconDead].addFile(":/res/deadicon_disabled.png", QSize(), QIcon::Disabled, QIcon::On);
-
     /* Calculate the region and window size */
     calculateRegionSizes();
 
-    /* Start timer every 100 msec (can do more, but it costs CPU time!) */
+    /* Start timer every 100 msec (can do faster timers, but it costs CPU load!) */
     startTimer(100, Qt::PreciseTimer);
-
-    /* Register global hotkeys for start, pause/resume, reset */
-    QxtGlobalShortcut* shortcutSplit = new QxtGlobalShortcut(this);
-    shortcutSplit->setShortcut(QKeySequence("Ctrl+Shift+F1"));
-    QxtGlobalShortcut* shortcutPause = new QxtGlobalShortcut(this);
-    shortcutPause->setShortcut(QKeySequence("Ctrl+Shift+F2"));
-    QxtGlobalShortcut* shortcutReset = new QxtGlobalShortcut(this);
-    shortcutReset->setShortcut(QKeySequence("Ctrl+Shift+F3"));
-    connect(shortcutSplit, &QxtGlobalShortcut::activated, this, &MainWindow::onSplit);
-    connect(shortcutPause, &QxtGlobalShortcut::activated, this, &MainWindow::onPause);
-    connect(shortcutReset, &QxtGlobalShortcut::activated, this, &MainWindow::onReset);
 
     /* Start the thread for managing IPC to allow external programs to
      * change section number and iconstates */
@@ -118,10 +97,8 @@ void MainWindow::paintEvent(QPaintEvent* event) {
     painter.drawLine(regionTimeList.bottomLeft(), regionTimeList.bottomRight());
 
     /* Status bar: 5 icons + two timers */
-    for(int i = 0; i < iconCOUNT; ++i) {
-        iconStates[i].paint(&painter, QRect(i * iconSize + marginSize, regionStatus.bottom() - iconSize - marginSize, iconSize, iconSize),
-                            Qt::AlignCenter, gameStates[i] ? QIcon::Normal : QIcon::Disabled);
-    }
+    icons.showAllIcons();
+    icons.paint(painter, regionStatus);
 
     painter.setFont(userFonts["realTimer"]);
     painter.setPen(userColors["realTimer"]);
@@ -435,6 +412,22 @@ void MainWindow::setupContextMenu() {
     this->addAction(ui->action_Exit);
 }
 
+void MainWindow::setupGlobalShortcuts() {
+    /* Register global hotkeys for start, pause/resume, reset */
+    QxtGlobalShortcut* shortcutSplit = new QxtGlobalShortcut(this);
+    shortcutSplit->setShortcut(QKeySequence("Ctrl+Shift+F1"));
+
+    QxtGlobalShortcut* shortcutPause = new QxtGlobalShortcut(this);
+    shortcutPause->setShortcut(QKeySequence("Ctrl+Shift+F2"));
+
+    QxtGlobalShortcut* shortcutReset = new QxtGlobalShortcut(this);
+    shortcutReset->setShortcut(QKeySequence("Ctrl+Shift+F3"));
+
+    connect(shortcutSplit, &QxtGlobalShortcut::activated, this, &MainWindow::onSplit);
+    connect(shortcutPause, &QxtGlobalShortcut::activated, this, &MainWindow::onPause);
+    connect(shortcutReset, &QxtGlobalShortcut::activated, this, &MainWindow::onReset);
+}
+
 void MainWindow::readSettings() {
     /* Read font and color settings into maps for convenient access */
     readSettingsFonts();
@@ -506,15 +499,10 @@ void MainWindow::readSettingsData() {
     int segments = data.getCurrentSegments(displaySegments, segmentLines);
     qDebug("Got %d segments from data object", segments);
 
-    settings->endGroup();
-}
+    /* Load food data */
+    icons.loadFromFile(foodData);
 
-void MainWindow::updateIcons(const FluffelIPCThread::listenerData& newdata) {
-    gameStates[iconFluffel] = true;
-    gameStates[iconLoading] = true;
-    gameStates[iconSavegame] = true;
-    gameStates[iconCinema] = true;
-    gameStates[iconDead] = true;
+    settings->endGroup();
 }
 
 void MainWindow::paintSegmentLine(QPainter& painter, QRect rect, SplitData::segment& segment) {

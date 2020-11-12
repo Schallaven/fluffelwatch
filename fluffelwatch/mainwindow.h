@@ -13,6 +13,7 @@
 #include <QProcess>
 #include <QSettings>
 
+#include "icondisplay.h"
 #include "fluffelipcthread.h"
 #include "fluffeltimer.h"
 #include "splitdata.h"
@@ -55,16 +56,16 @@ class MainWindow : public QMainWindow {
     void onExit();
 
   private:
-    /* User interface definitions and setting files */
-    Ui::MainWindow *ui;
-    QSettings *settings = nullptr;
+    /* User interface definitions and setup */
+    Ui::MainWindow *ui;    
+    IconDisplay icons;
 
     void setupContextMenu();
+    void setupGlobalShortcuts();
 
     /* Settings are saved here mostly as maps that can be accessed
-     * by a convenient key. The template function allows to read
-     * different types into different maps with one convenient
-     * function. */
+     * by a convenient key. */
+    QSettings *settings = nullptr;
     void readSettings();
     void readSettingsFonts();
     void readSettingsColors();
@@ -99,20 +100,6 @@ class MainWindow : public QMainWindow {
 
     int marginSize;
     int iconSize;
-
-    /* Status icons */
-    enum icons {
-        iconFluffel = 0,
-        iconLoading = 1,
-        iconSavegame = 2,
-        iconCinema = 3,
-        iconDead = 4,
-        iconCOUNT = 5
-    };
-    QIcon iconStates[iconCOUNT];
-    bool gameStates[iconCOUNT] = {false};
-
-    void updateIcons(const FluffelIPCThread::listenerData& newdata);
 
     int segmentLines;
     QSize segmentSize;
