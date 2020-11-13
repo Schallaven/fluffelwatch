@@ -53,7 +53,11 @@ bool TimeController::isAnyTimerRunning() {
 }
 
 quint64 TimeController::elapsedRealTime() {
-    return timeReal.elapsed_with_pause();
+    if (timeReal.isValid()) {
+        return timeReal.elapsed_with_pause();
+    }
+
+    return 0;
 }
 
 QString TimeController::elapsedRealTimeString() {
@@ -61,7 +65,11 @@ QString TimeController::elapsedRealTimeString() {
 }
 
 quint64 TimeController::elapsedIngameTime() {
-    return timeIngame.elapsed_with_pause();
+    if (timeIngame.isValid()) {
+        return timeIngame.elapsed_with_pause();
+    }
+
+    return 0;
 }
 
 QString TimeController::elapsedIngameTimeString() {

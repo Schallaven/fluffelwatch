@@ -77,7 +77,7 @@ class MainWindow : public QMainWindow {
 
     QBrush backgroundBrush;
     QMap<QString, QFont> userFonts;
-    QMap<QString, QPen> userColors;
+    QMap<QString, QColor> userColors;
 
     /* Thread that handles the IPC with external programs, i.e. the actual
      * autosplitters (also controlling icon display, etc.) */
@@ -99,14 +99,20 @@ class MainWindow : public QMainWindow {
     /* Data and timer objects */
     SplitData data;
 
-    /* Painting brushes, pens, and fonts */
+    /* Painting functions and tools */
+    void paintAllElements(QPainter &painter);
+
+    void paintText(QPainter &painter, const QRect &rect, const QFont &font, const QColor &color, const QString &text, int flags);
+    void paintSeparator(QPainter &painter, const QPoint& start, const QPoint &end);
+
+    void paintSegmentLine(QPainter &painter, QRect rect, SplitData::segment &segment);
 
 
     QSize adjustedTimerSize;
     QSize mainTimerSize;
 
     int marginSize;
-    int iconSize;
+
 
     int segmentLines;
     QSize segmentSize;
@@ -115,7 +121,7 @@ class MainWindow : public QMainWindow {
 
     QStringList measureList;
 
-    void paintSegmentLine(QPainter &painter, QRect rect, SplitData::segment &segment);
+
 
     /* Region functions */
     QRect regionTitle;

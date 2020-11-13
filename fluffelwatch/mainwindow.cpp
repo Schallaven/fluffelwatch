@@ -72,47 +72,11 @@ void MainWindow::paintEvent(QPaintEvent* event) {
     painter.setRenderHint(QPainter::Antialiasing);
     painter.testRenderHint(QPainter::TextAntialiasing);
 
-    /* Fill background */
+    /* Fill background and draw all elements */
     painter.setBrush(backgroundBrush);
     painter.drawRect(this->rect());
 
-    /* Title */
-    painter.setFont(userFonts["mainTitle"]);
-    painter.setPen(userColors["mainTitle"]);
-    painter.drawText(regionTitle, Qt::AlignHCenter | Qt::AlignVCenter, data.getTitle());
-
-    painter.setPen(userColors["separatorLine"]);
-    painter.drawLine(regionTitle.bottomLeft(), regionTitle.bottomRight());
-
-    /* Time list */
-    int lines = qMin(segmentLines, displaySegments.size());
-    for (int i = 0; i < lines; ++i) {
-        paintSegmentLine(painter, QRect(marginSize,
-                                        regionTimeList.top() + marginSize + i * segmentSize.height(),
-                                        segmentSize.width(),
-                                        segmentSize.height()), displaySegments[i]);
-    }
-
-    painter.setPen(userColors["separatorLine"]);
-    painter.drawLine(regionTimeList.bottomLeft(), regionTimeList.bottomRight());
-
-    /* Status bar: 5 icons + two timers */
-    icons.paint(painter, regionStatus);
-
-    painter.setFont(userFonts["realTimer"]);
-    painter.setPen(userColors["realTimer"]);
-    painter.drawText(QRect(regionStatus.right() - mainTimerSize.width() - marginSize,
-                           regionStatus.top() + marginSize,
-                           mainTimerSize.width(),
-                           mainTimerSize.height()), Qt::AlignRight | Qt::AlignVCenter, timeControl.elapsedRealTimeString());
-
-    painter.setFont(userFonts["ingameTimer"]);
-    painter.setPen(userColors["ingameTimer"]);
-    painter.drawText(QRect(regionStatus.right() - adjustedTimerSize.width() - marginSize,
-                           regionStatus.bottom() - adjustedTimerSize.height() - marginSize,
-                           adjustedTimerSize.width(),
-                           adjustedTimerSize.height()), Qt::AlignRight | Qt::AlignVCenter, timeControl.elapsedIngameTimeString());
-
+    paintAllElements(painter);
 }
 
 void MainWindow::timerEvent(QTimerEvent* event) {
@@ -426,12 +390,11 @@ void MainWindow::readSettings() {
     /* Read font and color settings into maps for convenient access */
     readSettingsFonts();
     readSettingsColors();
-    backgroundBrush = QBrush(userColors["background"].color());
+    backgroundBrush = QBrush(userColors["background"]);
 
     /* General settings */
     marginSize = settings->value("marginSize", 0).toInt();
     segmentLines = qMax(2, settings->value("segmentLines").toInt());
-    iconSize = settings->value("iconSize", 40).toInt();
 
     /* Autosplit (will automatically set the boolean through the toggle slot) */
     ui->actionAutosplit_between_missions->setChecked(settings->value("autosplit", false).toBool());
@@ -465,13 +428,11 @@ void MainWindow::readSettingsColors() {
     QStringList keys = settings->allKeys();
 
     /* Iterate over each key and create an entry in the map. The value is read into a string
-     * and then converted to QColor. With this color a pen is created for convenience of all
-     * drawing functions. If really only the color is needed (such as in the case of the
-     * background), simply use userColors["background"].color(). */
+     * and then converted to QColor. */
     for(int i = 0; i < keys.size(); ++i) {
         QColor value = QColor(settings->value(keys[i], "#fefefe").toString());
 
-        userColors.insert(keys[i], QPen(value));
+        userColors.insert(keys[i], value);
     }
 
     /* Reset the group */
@@ -500,45 +461,113 @@ void MainWindow::readSettingsData() {
     settings->endGroup();
 }
 
-void MainWindow::paintSegmentLine(QPainter& painter, QRect rect, SplitData::segment& segment) {
-    /* Segment title */
-    painter.setFont(userFonts["segmentTitle"]);
-    painter.setPen(userColors["segmentTitle"]);
-    if (segment.current && timeControl.areBothTimerValid()) {
-        painter.setPen(userColors["currentSegment"]);
-    }
-    painter.drawText(rect, Qt::AlignLeft | Qt::AlignVCenter, segment.title);
+void MainWindow::paintAllElements(QPainter& painter) {
+    /* Main title (taken from split data file) */
+    paintText(painter, regionTitle, userFonts["mainTitle"], userColors["mainTitle"], data.getTitle(), Qt::AlignCenter);
 
-    /* Segment diff time (if it exists) */
-    if (segment.ran) {
-        painter.setFont(userFonts["segmentDiff"]);
+    /* Separators */
+    paintSeparator(painter, regionTitle.bottomLeft(), regionTitle.bottomRight());
+    paintSeparator(painter, regionTimeList.bottomLeft(), regionTimeList.bottomRight());
+
+    /* Paint all segments (middle part) */
+    int lines = qMin(segmentLines, displaySegments.size());
+    for (int i = 0; i < lines; ++i) {
+        paintSegmentLine(painter, QRect(marginSize,
+                                        regionTimeList.top() + marginSize + i * segmentSize.height(),
+                                        segmentSize.width(),
+                                        segmentSize.height()), displaySegments[i]);
+    }
+
+    /* Status area: the icons + the ingame and real timer */
+    QRect rectReal = QRect(regionStatus.right() - mainTimerSize.width() - marginSize,
+                               regionStatus.top() + marginSize,
+                               mainTimerSize.width(),
+                               mainTimerSize.height());
+    QRect rectIngame = QRect(regionStatus.right() - adjustedTimerSize.width() - marginSize,
+                             regionStatus.bottom() - adjustedTimerSize.height() - marginSize,
+                             adjustedTimerSize.width(),
+                             adjustedTimerSize.height());
+
+    icons.paint(painter, regionStatus);
+    paintText(painter, rectReal, userFonts["realTimer"], userColors["realTimer"],
+                                 timeControl.elapsedRealTimeString(), Qt::AlignRight | Qt::AlignVCenter);
+    paintText(painter, rectIngame, userFonts["ingameTimer"], userColors["ingameTimer"],
+                                 timeControl.elapsedIngameTimeString(), Qt::AlignRight | Qt::AlignVCenter);
+}
+
+void MainWindow::paintText(QPainter& painter, const QRect& rect, const QFont& font, const QColor& color, const QString& text, int flags) {
+    painter.setFont(font);
+    painter.setPen(color);
+    painter.drawText(rect, flags, text);
+}
+
+void MainWindow::paintSeparator(QPainter& painter, const QPoint& start, const QPoint& end) {
+    painter.setPen(userColors["separatorLine"]);
+    painter.drawLine(start, end);
+}
+
+void MainWindow::paintSegmentLine(QPainter& painter, QRect rect, SplitData::segment& segment) {
+    /* Use this variable to set and vary the current text color */
+    QColor textColor = userColors["segmentTitle"];
+
+    /* Segment title: highlighted if it is current segment */
+    if (segment.current && timeControl.areBothTimerValid()) {
+        textColor = userColors["currentSegment"];
+    }
+    paintText(painter, rect, userFonts["segmentTitle"], textColor, segment.title, Qt::AlignLeft | Qt::AlignVCenter);
+
+    /* Segment difference time; display only if the segment was ran or it is the current segment */
+    QRect rectDiff = QRect(rect.right() - segmentColumnSizes[2] - segmentColumnSizes[1] - marginSize * 2,
+        rect.top(),
+        segmentColumnSizes[1],
+        rect.height());
+
+    textColor = userColors["segmentTitle"];
+    if (segment.current && timeControl.areBothTimerValid()) {
+        /* Calculate a temporary improvement time here */
+        quint64 improtime = timeControl.elapsedPreferredTime() - segment.totaltime;
+
+        /* Display with normal text color */
+        paintText(painter, rectDiff, userFonts["segmentDiff"], textColor,
+                           TimeController::getStringFromTimeDiff(improtime), Qt::AlignRight | Qt::AlignVCenter);
+    } else if (segment.ran) {
         if (segment.improtime < 0) {
-            painter.setPen(userColors["gainedTime"]);
+            textColor = userColors["gainedTime"];
         } else if (segment.improtime > 0 ) {
-            painter.setPen(userColors["lostTime"]);
+            textColor = userColors["lostTime"];
         }
 
-        painter.drawText(QRect(rect.right() - segmentColumnSizes[2] - segmentColumnSizes[1] - marginSize * 2,
-                               rect.top(),
-                               segmentColumnSizes[1],
-                               rect.height()), Qt::AlignRight | Qt::AlignVCenter,
-                         FluffelTimer::getStringFromTimeDiff(segment.totalimprotime));
+        paintText(painter, rectDiff, userFonts["segmentDiff"], textColor,
+                           TimeController::getStringFromTimeDiff(segment.totalimprotime), Qt::AlignRight | Qt::AlignVCenter);
     }
 
     /* Segment time (or improvement) */
-    painter.setFont(userFonts["segmentTime"]);
-    painter.setPen(userColors["segmentTime"]);
-    if (segment.ran && (segment.runtime < segment.besttime)) {
-        painter.setPen(userColors["newRecord"]);
-    } else if (!segment.ran && !segment.current) {
-        painter.setPen(userColors["segmentTime"]);
+    QRect rectTime = QRect(rect.right() - segmentColumnSizes[2] - marginSize * 2,
+            rect.top(),
+            segmentColumnSizes[2],
+            rect.height());
+
+    textColor = userColors["segmentTime"];
+    if (segment.ran) {
+        if (segment.runtime < segment.besttime) {
+            textColor = userColors["newRecord"];
+        } else if (segment.improtime > 0) {
+            textColor = userColors["lostTime"];
+        } else if (segment.improtime < 0) {
+            textColor = userColors["gainedTime"];
+        }
+
+        paintText(painter, rectTime, userFonts["segmentTime"], textColor,
+                           TimeController::getStringFromTime(segment.totaltime), Qt::AlignRight | Qt::AlignVCenter);
+    } else if (segment.current && timeControl.areBothTimerValid()) {
+        textColor = userColors["currentSegment"];
+
+        paintText(painter, rectTime, userFonts["segmentTime"], textColor,
+                           TimeController::getStringFromTime(timeControl.elapsedPreferredTime()), Qt::AlignRight | Qt::AlignVCenter);
+    } else {
+        paintText(painter, rectTime, userFonts["segmentTime"], textColor,
+                           TimeController::getStringFromTime(segment.totaltime), Qt::AlignRight | Qt::AlignVCenter);
     }
-    QString time = FluffelTimer::getStringFromTime(segment.runtime) + " ";
-    painter.drawText(QRect(rect.right() - segmentColumnSizes[2] - marginSize * 2,
-                           rect.top(),
-                           segmentColumnSizes[2],
-                           rect.height()), Qt::AlignRight | Qt::AlignVCenter,
-                     FluffelTimer::getStringFromTime(segment.totaltime) + " ");
 }
 
 void MainWindow::calculateRegionSizes() {
@@ -570,7 +599,7 @@ void MainWindow::calculateRegionSizes() {
     QFontMetrics atFm(userFonts["ingameTimer"]);
     adjustedTimerSize = atFm.size(Qt::TextSingleLine, "00:00:00.0");
 
-    QSize iconArea = QSize(5 * iconSize, iconSize);
+    QSize iconArea = adjustedTimerSize;
 
     regionStatus = QRect(regionTimeList.bottomLeft(),
                          QSize(iconArea.width() + qMax(mainTimerSize.width(), adjustedTimerSize.width()),
