@@ -104,14 +104,14 @@ void MainWindow::paintEvent(QPaintEvent* event) {
     painter.drawText(QRect(regionStatus.right() - mainTimerSize.width() - marginSize,
                            regionStatus.top() + marginSize,
                            mainTimerSize.width(),
-                           mainTimerSize.height()), Qt::AlignRight | Qt::AlignVCenter, timerReal.toString());
+                           mainTimerSize.height()), Qt::AlignRight | Qt::AlignVCenter, timeControl.elapsedRealTimeString());
 
     painter.setFont(userFonts["ingameTimer"]);
     painter.setPen(userColors["ingameTimer"]);
     painter.drawText(QRect(regionStatus.right() - adjustedTimerSize.width() - marginSize,
                            regionStatus.bottom() - adjustedTimerSize.height() - marginSize,
                            adjustedTimerSize.width(),
-                           adjustedTimerSize.height()), Qt::AlignRight | Qt::AlignVCenter, timerAdjusted.toString());
+                           adjustedTimerSize.height()), Qt::AlignRight | Qt::AlignVCenter, timeControl.elapsedIngameTimeString());
 
 }
 
@@ -194,25 +194,23 @@ void MainWindow::timerEvent(QTimerEvent* event) {
 
 void MainWindow::onSplit() {
     /* If timers are not started yet, start them */
-    if (!timerReal.isValid()) {
+    if (!timeControl.areBothTimerValid()) {
         qDebug("Start");
-        timerReal.start();
-        timerAdjusted.start();
 
+        timeControl.startBothTimer();
         return;
     }
 
     /* Otherwise, split the time here */
     qDebug("Split");
     displaySegments.clear();
-    int remains = data.split(timerReal.elapsed_with_pause());
+    int remains = data.split(timeControl.elapsedPreferredTime());
     int segments = data.getCurrentSegments(displaySegments, segmentLines);
     qDebug("Got %d segments from data object. %d remaining segments.", segments, remains);
 
     /* Stop the timer if that was the last split */
     if (remains == 0) {
-        timerReal.pause();
-        timerAdjusted.pause();
+        timeControl.pauseBothTimer();
     }
 }
 
@@ -224,23 +222,15 @@ void MainWindow::onPause() {
     }
 
     /* Check if paused or not */
-    if (timerReal.isPaused() && timerAdjusted.isPaused()) {
-        qDebug("resume");
-        timerReal.resume();
-        timerAdjusted.resume();
-    } else {
-        qDebug("pause");
-        timerReal.pause();
-        timerAdjusted.pause();
-    }
+    qDebug("Toggle timer");
+    timeControl.toggleBothTimer();
 }
 
 void MainWindow::onReset() {
     bool merge = false;
 
     /* Pause timer so they do not continue running */
-    timerReal.pause();
-    timerAdjusted.pause();
+    timeControl.pauseBothTimer();
 
     /* Check if there have been splits and ask user about data */
     if (data.hasSplit()) {
@@ -251,8 +241,7 @@ void MainWindow::onReset() {
     }
 
     qDebug("Reset");
-    timerReal.invalidate();
-    timerAdjusted.invalidate();
+    timeControl.resetBothTimer();
     displaySegments.clear();
 
     /* Reset data */
@@ -268,8 +257,7 @@ void MainWindow::onOpen() {
     qDebug("open");
 
     /* Pause timer so they do not continue running */
-    timerReal.pause();
-    timerAdjusted.pause();
+    timeControl.pauseBothTimer();
 
     /* Check if there have been splits and ask user about data */
     if (data.hasSplit()) {
@@ -293,8 +281,7 @@ void MainWindow::onOpen() {
     data.loadData(filename);
 
     /* Set back timers, display, etc. */
-    timerReal.invalidate();
-    timerAdjusted.invalidate();
+    timeControl.resetBothTimer();
 
     displaySegments.clear();
     data.getCurrentSegments(displaySegments, segmentLines);
@@ -306,8 +293,7 @@ void MainWindow::onSave() {
     qDebug("save");
 
     /* Pause timer so they do not continue running */
-    timerReal.pause();
-    timerAdjusted.pause();
+    timeControl.pauseBothTimer();
 
     /* Merging unsaved data */
     data.reset(true);
@@ -324,8 +310,7 @@ void MainWindow::onSaveAs() {
     qDebug("saveas");
 
     /* Pause timer so they do not continue running */
-    timerReal.pause();
-    timerAdjusted.pause();
+    timeControl.pauseBothTimer();
 
     /* Let the user select a filename to save the segment data */
     QString filename = QFileDialog::getSaveFileName(this, "Save segment data", data.getFilename(), "All files (*.*)");
@@ -337,17 +322,16 @@ void MainWindow::onSaveAs() {
 }
 
 void MainWindow::onToggleAutosplit(bool enable) {
-    displaySegments.clear();
-    int remains = data.splitToMission(20, timerReal.elapsed_with_pause());
+    /*displaySegments.clear();
+    int remains = data.splitToMission(20, timeControl.elapsedPreferredTime());
     int segments = data.getCurrentSegments(displaySegments, segmentLines);
     qDebug("Got %d segments from data object. %d remaining segments.", segments, remains);
+    */
 
     /* Stop the timer if that was the last split */
-    if (remains == 0) {
-        timerReal.pause();
-        timerAdjusted.pause();
-    }
-
+    /*if (remains == 0) {
+        timeControl.pauseBothTimer();
+    }*/
 
     if (enable) {
         qDebug("Enabled autosplit");
@@ -520,7 +504,7 @@ void MainWindow::paintSegmentLine(QPainter& painter, QRect rect, SplitData::segm
     /* Segment title */
     painter.setFont(userFonts["segmentTitle"]);
     painter.setPen(userColors["segmentTitle"]);
-    if (segment.current && timerReal.isValid()) {
+    if (segment.current && timeControl.areBothTimerValid()) {
         painter.setPen(userColors["currentSegment"]);
     }
     painter.drawText(rect, Qt::AlignLeft | Qt::AlignVCenter, segment.title);
@@ -543,6 +527,7 @@ void MainWindow::paintSegmentLine(QPainter& painter, QRect rect, SplitData::segm
 
     /* Segment time (or improvement) */
     painter.setFont(userFonts["segmentTime"]);
+    painter.setPen(userColors["segmentTime"]);
     if (segment.ran && (segment.runtime < segment.besttime)) {
         painter.setPen(userColors["newRecord"]);
     } else if (!segment.ran && !segment.current) {

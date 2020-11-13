@@ -34,7 +34,8 @@ SOURCES += \
     qxt/qxtglobalshortcut_x11.cpp \
     qxt/qxtglobalshortcut.cpp \
     fluffelipcthread.cpp \
-    icondisplay.cpp
+    icondisplay.cpp \
+    timecontroller.cpp
 
 HEADERS += \
         mainwindow.h \
@@ -44,7 +45,8 @@ HEADERS += \
     qxt/qxtglobalshortcut.h \
     qxt/xcbkeyboard.h \
     fluffelipcthread.h \
-    icondisplay.h
+    icondisplay.h \
+    timecontroller.h
 
 FORMS += \
         mainwindow.ui

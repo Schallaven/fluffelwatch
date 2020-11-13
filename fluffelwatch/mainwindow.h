@@ -15,8 +15,8 @@
 
 #include "icondisplay.h"
 #include "fluffelipcthread.h"
-#include "fluffeltimer.h"
 #include "splitdata.h"
+#include "timecontroller.h"
 
 #include "qxt/qxtglobalshortcut.h"
 
@@ -79,10 +79,17 @@ class MainWindow : public QMainWindow {
     QMap<QString, QFont> userFonts;
     QMap<QString, QPen> userColors;
 
-
-
-
+    /* Thread that handles the IPC with external programs, i.e. the actual
+     * autosplitters (also controlling icon display, etc.) */
     FluffelIPCThread ipcthread;
+
+    /* Object to control the real and ingame timer */
+    TimeController timeControl;
+
+
+
+
+
 
     /* Options */
     bool autosplit = false;
@@ -91,8 +98,6 @@ class MainWindow : public QMainWindow {
 
     /* Data and timer objects */
     SplitData data;
-    FluffelTimer timerReal;
-    FluffelTimer timerAdjusted;
 
     /* Painting brushes, pens, and fonts */
 
