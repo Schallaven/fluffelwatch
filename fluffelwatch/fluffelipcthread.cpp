@@ -10,6 +10,7 @@ const QString FluffelIPCThread::listenerName = "fluffelwatch";
 FluffelIPCThread::FluffelIPCThread() {
     server = nullptr;
     client = nullptr;
+    changed = false;
 
     /* Give this thread a good name to be able to find it in process overviews (ps and the like) */
     setObjectName("fluffelwatch socket thread");
@@ -22,6 +23,8 @@ void FluffelIPCThread::run() {
     /* Nothing connected */
     server = nullptr;
     client = nullptr;
+    changed = false;
+    internalData = listenerData();
 
     if (!openListener()) {
         qDebug("Socket could not be opened. Aborting thread.");
@@ -65,15 +68,16 @@ void FluffelIPCThread::run() {
 
         /* Read data from connected client if available; will also reduce the CPU load */
         if (client->waitForReadyRead(timeout)) {
-            /* Read data. The data is always exactly 2 x 32bit = 1 x 64bit = 8 bytes.
-             * The first 32bit integer is the "section number" used for autosplitting.
-             * The second 32bit integer is the state of the icons encoded as bits, i.e.
-             * 32 icons max (1 = on, 0 = off). */
+            /* Read data. The data is 1 byte for the loading/stoptimer byte and another
+             * 2 x 32bit integers (8 bytes) in size. The first 32bit integer is the
+             * "section number" used for autosplitting. The second 32bit integer is the
+             * state of the icons encoded as bits, i.e. 32 icons max (1 = on, 0 = off). */
             listenerData value;
-            quint64 readbytes = client->read(reinterpret_cast<char*>(&value), 8);
+            quint64 readbytes = client->read(reinterpret_cast<char*>(&value), sizeof(value));
 
-            if (readbytes == 8) {
-                qDebug("Read from socket: section = %d, iconstates = 0x%08X", value.section, value.iconstates);
+            if (readbytes == sizeof(listenerData)) {
+                qDebug("Read from socket: stoptimer = %d, section = %d, iconstates = 0x%08X",
+                       value.stoptimer, value.section, value.iconstates);
                 updateData(value);
             }
 
@@ -89,12 +93,13 @@ void FluffelIPCThread::run() {
     }
 }
 
-bool FluffelIPCThread::isListening() const {
-    return (server != nullptr) && (server->isListening());
+FluffelIPCThread::listenerData FluffelIPCThread::getData() {
+    changed = false;
+    return internalData;
 }
 
-FluffelIPCThread::listenerData FluffelIPCThread::getData() const {
-    return internalData;
+bool FluffelIPCThread::dataChanged() const {
+    return changed;
 }
 
 bool FluffelIPCThread::openListener() {
@@ -131,8 +136,20 @@ void FluffelIPCThread::closeListener() {
 }
 
 void FluffelIPCThread::updateData(const FluffelIPCThread::listenerData& newdata) {
+    /* Nothing changed, so do nothing here */
+    if (newdata == internalData) {
+        return;
+    }
+
     accessMutex.lock();
-    internalData.section = newdata.section;
+    internalData.stoptimer  = newdata.stoptimer;
+    internalData.section    = newdata.section;
     internalData.iconstates = newdata.iconstates;
+    changed = true;
     accessMutex.unlock();
+}
+
+bool operator==(const FluffelIPCThread::listenerData& lhs, const FluffelIPCThread::listenerData& rhs) {
+    /* Allows to compare listener data simply by == */
+    return (lhs.stoptimer == rhs.stoptimer) && (lhs.section == rhs.section) && (lhs.iconstates == rhs.iconstates);
 }

@@ -97,7 +97,6 @@ void MainWindow::paintEvent(QPaintEvent* event) {
     painter.drawLine(regionTimeList.bottomLeft(), regionTimeList.bottomRight());
 
     /* Status bar: 5 icons + two timers */
-    icons.showAllIcons();
     icons.paint(painter, regionStatus);
 
     painter.setFont(userFonts["realTimer"]);
@@ -118,6 +117,17 @@ void MainWindow::paintEvent(QPaintEvent* event) {
 
 void MainWindow::timerEvent(QTimerEvent* event) {
     Q_UNUSED(event)
+
+    /* Process new information from thread if available */
+    if (ipcthread.dataChanged()) {
+        /* Get the newest data */
+        FluffelIPCThread::listenerData tempData = ipcthread.getData();
+
+        /* Send icon states to the icon manager */
+        icons.setStates(tempData.iconstates);
+
+        qDebug("New state: section = %d, states = 0x%08X, stoptimer = %d", tempData.section, tempData.iconstates, tempData.stoptimer);
+    }
 
     /* Process new information */
 //    if (memoryReaderThread.isRunning()) {
@@ -501,6 +511,7 @@ void MainWindow::readSettingsData() {
 
     /* Load food data */
     icons.loadFromFile(foodData);
+    icons.showAllIcons();
 
     settings->endGroup();
 }

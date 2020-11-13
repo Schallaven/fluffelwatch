@@ -63,6 +63,10 @@ class MainWindow : public QMainWindow {
     void setupContextMenu();
     void setupGlobalShortcuts();
 
+    /* Window movement control */
+    bool isMoving = false;
+    QPoint movingStartPos;
+
     /* Settings are saved here mostly as maps that can be accessed
      * by a convenient key. */
     QSettings *settings = nullptr;
@@ -83,9 +87,7 @@ class MainWindow : public QMainWindow {
     /* Options */
     bool autosplit = false;
 
-    /* Window movement on client */
-    bool isMoving = false;
-    QPoint movingStartPos;
+
 
     /* Data and timer objects */
     SplitData data;

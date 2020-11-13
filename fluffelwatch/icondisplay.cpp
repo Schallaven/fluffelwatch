@@ -55,8 +55,6 @@ void IconDisplay::loadFromFile(const QString& filename) {
 
         /* Grid size */
         if (fields[0] == "grid") {
-            qDebug("Found grid definition: %s", fields[1].toStdString().c_str());
-
             QStringList gridParams = fields[1].split("x");
             if (gridParams.size() != 2) {
                 continue;
@@ -64,25 +62,19 @@ void IconDisplay::loadFromFile(const QString& filename) {
 
             lines = gridParams[0].toInt();
             columns= gridParams[1].toInt();
-            qDebug("Grid size parsed: %d lines by %d colums", lines, columns);
         }
 
         /* Icon definition */
         if ((fields[0].toInt() > 0) && (fields[0].toInt() <= maxIcons)) {
-            qDebug("Found definition for icon %d: %s", fields[0].toInt(), fields[1].toStdString().c_str());
-
             QPixmap icon(info.absolutePath() + "/" + fields[1]);
 
             if (icon.isNull()) {
-                qDebug("File could not be loaded.");
                 continue;
             }
 
             icons[fields[0].toInt()-1] = icon;
         }
     }
-
-    qDebug("Loaded %d icon definitions from file", icons.size());
 
     file.close();
 }
