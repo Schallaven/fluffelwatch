@@ -10,7 +10,6 @@
 #include <QMouseEvent>
 #include <QPainter>
 #include <QPaintEvent>
-#include <QProcess>
 #include <QSettings>
 
 #include "icondisplay.h"
@@ -80,6 +79,12 @@ class MainWindow : public QMainWindow {
     QMap<QString, QFont> userFonts;
     QMap<QString, QColor> userColors;
 
+    bool autosplit = false;
+    bool autosave = false;
+
+    int marginSize;
+    int segmentLines;
+
     /* Thread that handles the IPC with external programs, i.e. the actual
      * autosplitters (also controlling icon display, etc.) */
     FluffelIPCThread ipcthread;
@@ -87,19 +92,9 @@ class MainWindow : public QMainWindow {
     /* Object to control the real and ingame timer */
     TimeController timeControl;
 
-
-
-
-
-
-    /* Options */
-    bool autosplit = false;
-    bool autosave = false;
-
-
-
-    /* Data and timer objects */
+    /* Split data object and the segments that are shown in the main window */
     SplitData data;
+    QList<SplitData::segment> displaySegments;
 
     /* Painting functions and tools */
     void paintAllElements(QPainter &painter);
@@ -107,19 +102,22 @@ class MainWindow : public QMainWindow {
     void paintText(QPainter &painter, const QRect &rect, const QFont &font, const QColor &color, const QString &text, int flags);
     void paintSeparator(QPainter &painter, const QPoint& start, const QPoint &end);
 
-    void paintSegmentLine(QPainter &painter, QRect rect, SplitData::segment &segment);
+    void paintSegmentLine(QPainter &painter, const QRect &rect, SplitData::segment &segment);
+    void paintSegmentLinePast(QPainter &painter, const QRect& rect, SplitData::segment &segment);
+    void paintSegmentLineCurrent(QPainter &painter, const QRect& rect, SplitData::segment &segment);
+    void paintSegmentLineFuture(QPainter &painter, const QRect& rect, SplitData::segment &segment);
+
+
+
 
 
     QSize adjustedTimerSize;
     QSize mainTimerSize;
 
-    int marginSize;
 
-
-    int segmentLines;
     QSize segmentSize;
     int segmentColumnSizes[3];
-    QList<SplitData::segment> displaySegments;
+
 
 
 

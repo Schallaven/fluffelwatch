@@ -1,10 +1,6 @@
 #include "mainwindow.h"
 #include "ui_mainwindow.h"
 
-#include <unistd.h>
-#include <sys/ptrace.h>
-#include <sys/types.h>
-
 MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::MainWindow) {
     /* Setup UI with a border less window and an action context menu */
     ui->setupUi(this);
@@ -321,7 +317,7 @@ void MainWindow::onExit() {
     if (autosave && data.hasSplit()) {
         QString filename = QDateTime::currentDateTime().toString("yyyy.MM.dd hh:mm:ss") + " " + data.getTitle() + ".conf";
         data.saveData(filename);
-        settings->setValue("segmentdata", filename);
+        settings->setValue("Data/segmentData", filename);
     }
 
     /* Destroy the settings here to sync it and write everything to the file. */
@@ -429,17 +425,16 @@ void MainWindow::readSettingsData() {
     QString segmentData = settings->value("segmentData").toString();
     QString foodData = settings->value("foodData").toString();
 
-    qDebug("Segment data loaded from... %s", segmentData.toStdString().c_str());
-    qDebug("Food data loaded from... %s", foodData.toStdString().c_str());
-
     /* Load segment data */
     data.loadData(segmentData);
     int segments = data.getCurrentSegments(displaySegments, segmentLines);
+    qDebug("Segment data loaded from... %s", segmentData.toStdString().c_str());
     qDebug("Got %d segments from data object", segments);
 
     /* Load food data */
     icons.loadFromFile(foodData);
     icons.showAllIcons();
+    qDebug("Food data loaded from... %s", foodData.toStdString().c_str());
 
     settings->endGroup();
 }
@@ -489,15 +484,24 @@ void MainWindow::paintSeparator(QPainter& painter, const QPoint& start, const QP
     painter.drawLine(start, end);
 }
 
-void MainWindow::paintSegmentLine(QPainter& painter, QRect rect, SplitData::segment& segment) {
-    /* Use this variable to set and vary the current text color */
-    QColor textColor = userColors["segmentTitle"];
-
-    /* Segment title: highlighted if it is current segment */
-    if (segment.current && timeControl.areBothTimerValid()) {
-        textColor = userColors["currentSegment"];
+void MainWindow::paintSegmentLine(QPainter& painter, const QRect& rect, SplitData::segment& segment) {
+    /* Decide which state we want to draw: past segments, current segment (when timer are on), and
+     * future segments. */
+    if (segment.ran) {
+        paintSegmentLinePast(painter, rect, segment);
+    } else if (segment.current && timeControl.areBothTimerValid()) {
+        paintSegmentLineCurrent(painter, rect, segment);
+    } else {
+        paintSegmentLineFuture(painter, rect, segment);
     }
-    paintText(painter, rect, userFonts["segmentTitle"], textColor, segment.title, Qt::AlignLeft | Qt::AlignVCenter);
+}
+
+void MainWindow::paintSegmentLinePast(QPainter& painter, const QRect& rect, SplitData::segment& segment) {
+    /* Draw a past/ran segment */
+
+    /* Segment title */
+    paintText(painter, rect, userFonts["segmentTitle"], userColors["segmentTitle"],
+              segment.title, Qt::AlignLeft | Qt::AlignVCenter);
 
     /* Segment difference time; display only if the segment was ran or it is the current segment */
     QRect rectDiff = QRect(rect.right() - segmentColumnSizes[2] - segmentColumnSizes[1] - marginSize * 2,
@@ -505,24 +509,56 @@ void MainWindow::paintSegmentLine(QPainter& painter, QRect rect, SplitData::segm
                            segmentColumnSizes[1],
                            rect.height());
 
-    textColor = userColors["segmentTitle"];
-    if (segment.current && timeControl.areBothTimerValid()) {
-        /* Calculate a temporary improvement time here */
-        quint64 improtime = timeControl.elapsedPreferredTime() - segment.totaltime;
-
-        /* Display with normal text color */
-        paintText(painter, rectDiff, userFonts["segmentDiff"], textColor,
-                  TimeController::getStringFromTimeDiff(improtime), Qt::AlignRight | Qt::AlignVCenter);
-    } else if (segment.ran) {
-        if (segment.improtime < 0) {
-            textColor = userColors["gainedTime"];
-        } else if (segment.improtime > 0 ) {
-            textColor = userColors["lostTime"];
-        }
-
-        paintText(painter, rectDiff, userFonts["segmentDiff"], textColor,
-                  TimeController::getStringFromTimeDiff(segment.totalimprotime), Qt::AlignRight | Qt::AlignVCenter);
+    QColor textColor = userColors["segmentTitle"];
+    if (segment.improtime < 0) {
+        textColor = userColors["gainedTime"];
+    } else if (segment.improtime > 0 ) {
+        textColor = userColors["lostTime"];
     }
+
+    paintText(painter, rectDiff, userFonts["segmentDiff"], textColor,
+              TimeController::getStringFromTimeDiff(segment.totalimprotime), Qt::AlignRight | Qt::AlignVCenter);
+
+
+    /* Segment time (lost or improvement) */
+    QRect rectTime = QRect(rect.right() - segmentColumnSizes[2] - marginSize * 2,
+                           rect.top(),
+                           segmentColumnSizes[2],
+                           rect.height());
+
+    textColor = userColors["segmentTime"];
+    if (segment.runtime < segment.besttime) {
+        textColor = userColors["newRecord"];
+    } else if (segment.improtime > 0) {
+        textColor = userColors["lostTime"];
+    } else if (segment.improtime < 0) {
+        textColor = userColors["gainedTime"];
+    }
+
+    paintText(painter, rectTime, userFonts["segmentTime"], textColor,
+              TimeController::getStringFromTime(segment.totaltime), Qt::AlignRight | Qt::AlignVCenter);
+
+}
+
+void MainWindow::paintSegmentLineCurrent(QPainter& painter, const QRect& rect, SplitData::segment& segment) {
+    /* Draw the current segment with the timers on */
+
+    /* Highlighted segment title */
+    paintText(painter, rect, userFonts["segmentTitle"], userColors["currentSegment"],
+              segment.title, Qt::AlignLeft | Qt::AlignVCenter);
+
+    /* Segment difference time; display only if the segment was ran or it is the current segment */
+    QRect rectDiff = QRect(rect.right() - segmentColumnSizes[2] - segmentColumnSizes[1] - marginSize * 2,
+                           rect.top(),
+                           segmentColumnSizes[1],
+                           rect.height());
+
+    qint64 improtime = timeControl.elapsedPreferredTime() - segment.totaltime;
+
+    /* Display with normal text color */
+    paintText(painter, rectDiff, userFonts["segmentDiff"], userColors["segmentTitle"],
+              TimeController::getStringFromTimeDiff(improtime), Qt::AlignRight | Qt::AlignVCenter);
+
 
     /* Segment time (or improvement) */
     QRect rectTime = QRect(rect.right() - segmentColumnSizes[2] - marginSize * 2,
@@ -530,27 +566,30 @@ void MainWindow::paintSegmentLine(QPainter& painter, QRect rect, SplitData::segm
                            segmentColumnSizes[2],
                            rect.height());
 
-    textColor = userColors["segmentTime"];
-    if (segment.ran) {
-        if (segment.runtime < segment.besttime) {
-            textColor = userColors["newRecord"];
-        } else if (segment.improtime > 0) {
-            textColor = userColors["lostTime"];
-        } else if (segment.improtime < 0) {
-            textColor = userColors["gainedTime"];
-        }
-
-        paintText(painter, rectTime, userFonts["segmentTime"], textColor,
-                  TimeController::getStringFromTime(segment.totaltime), Qt::AlignRight | Qt::AlignVCenter);
-    } else if (segment.current && timeControl.areBothTimerValid()) {
-        textColor = userColors["currentSegment"];
-
-        paintText(painter, rectTime, userFonts["segmentTime"], textColor,
-                  TimeController::getStringFromTime(timeControl.elapsedPreferredTime()), Qt::AlignRight | Qt::AlignVCenter);
-    } else {
-        paintText(painter, rectTime, userFonts["segmentTime"], textColor,
-                  TimeController::getStringFromTime(segment.totaltime), Qt::AlignRight | Qt::AlignVCenter);
+    QColor textcolor = userColors["currentSegment"];
+    if (improtime > 0) {
+        textcolor = userColors["lostTime"];
     }
+
+    paintText(painter, rectTime, userFonts["segmentTime"], textcolor,
+              TimeController::getStringFromTime(timeControl.elapsedPreferredTime()), Qt::AlignRight | Qt::AlignVCenter);
+
+}
+
+void MainWindow::paintSegmentLineFuture(QPainter& painter, const QRect& rect, SplitData::segment& segment) {
+    /* Draw a future segment */
+
+    /* Segment title */
+    paintText(painter, rect, userFonts["segmentTitle"], userColors["segmentTitle"],
+                             segment.title, Qt::AlignLeft | Qt::AlignVCenter);
+
+     /* Segment time */
+    QRect rectTime = QRect(rect.right() - segmentColumnSizes[2] - marginSize * 2,
+                           rect.top(),
+                           segmentColumnSizes[2],
+                           rect.height());
+    paintText(painter, rectTime, userFonts["segmentTime"], userColors["segmentTime"],
+                                 TimeController::getStringFromTime(segment.totaltime), Qt::AlignRight | Qt::AlignVCenter);
 }
 
 void MainWindow::calculateRegionSizes() {
