@@ -212,9 +212,6 @@ void MainWindow::onReset() {
     data.reset(merge);
     int segments = data.getCurrentSegments(displaySegments, segmentLines);
     qDebug("Got %d segments from data object", segments);
-
-    measureList.clear();
-    qDebug("Cleared measurement list");
 }
 
 void MainWindow::onOpen() {
@@ -306,47 +303,29 @@ void MainWindow::onToggleAutosplit(bool enable) {
     autosplit = enable;
 }
 
-void MainWindow::onExit() {
-    this->close();
-    return;
-
-    /* Whatever is in the split data, save it as a temporary file with a time stamp
-     * and set it as last filename used */
-    QString filename = QDateTime::currentDateTime().toString("yyyy.MM.dd hh:mm:ss") + " " + data.getTitle() + ".conf";
-    data.saveData(filename);
-    settings->setValue("segmentdata", filename);
-
-    /* Destroy the settings here to sync it and write everything to the file. This
-     * allows us to set permissions/ownership right if needed. */
-    QString settingsname = settings->fileName();
-    delete settings;
-
-    /* Make sure that if we run Fluffelwatch as su that the ownership is still given
-     * to the current user */
-    if (geteuid() == 0) {
-        /* Get the user id that invoked sudo */
-        int uid = atoi(getenv("SUDO_UID"));
-        int gid = atoi(getenv("SUDO_GID"));
-
-        qDebug("UID %d and GID %d", uid, gid);
-
-        if (uid != 0 && gid != 0) {
-            int ret = chown(filename.toStdString().c_str(), uid, gid);
-            qDebug("Chown ret %d. %d:%d", ret, uid, gid);
-
-            ret = chown(settingsname.toStdString().c_str(), uid, gid);
-            qDebug("Chown ret %d. %d:%d", ret, uid, gid);
-        }
+void MainWindow::onToggleAutosave(bool enable) {
+    if (enable) {
+        qDebug("Enabled autosave");
+    } else {
+        qDebug("Disabled autosave");
     }
 
-    /* Save measurements */
-    qDebug("Saving %d measurements", measureList.size());
-    QFile measurements("measurements.txt");
-    measurements.open(QFile::WriteOnly|QFile::Truncate|QFile::Text);
-    QTextStream out(&measurements);
-    QString toWrite = measureList.join("\n");
-    measurements.write(toWrite.toUtf8());
-    measurements.close();
+    autosave = enable;
+}
+
+void MainWindow::onExit() {
+    /* Whatever is in the split data, save it as a temporary file with a time stamp
+     * and set it as last filename used. Of course, only if the split data changed
+     * (i.e. has splits already). Set this file as the last split data file so that
+     * it will be loaded next time Fluffelwatch is opened. */
+    if (autosave && data.hasSplit()) {
+        QString filename = QDateTime::currentDateTime().toString("yyyy.MM.dd hh:mm:ss") + " " + data.getTitle() + ".conf";
+        data.saveData(filename);
+        settings->setValue("segmentdata", filename);
+    }
+
+    /* Destroy the settings here to sync it and write everything to the file. */
+    delete settings;
 
     /* Close the window */
     this->close();
@@ -366,6 +345,7 @@ void MainWindow::setupContextMenu() {
     this->addAction(ui->action_Open);
     this->addAction(ui->actionS_ave);
     this->addAction(ui->actionSave_as);
+    this->addAction(ui->actionAutosave_at_exit);
     this->addAction(separator2);
     this->addAction(ui->action_Exit);
 }
@@ -398,6 +378,9 @@ void MainWindow::readSettings() {
 
     /* Autosplit (will automatically set the boolean through the toggle slot) */
     ui->actionAutosplit_between_missions->setChecked(settings->value("autosplit", false).toBool());
+
+    /* Autosave splitdata when closing Fluffelwatch (will automatically set the boolean through the toggle slot) */
+    ui->actionAutosave_at_exit->setChecked(settings->value("autosave", false).toBool());
 
     /* Read the segment and food data if available */
     readSettingsData();
@@ -480,9 +463,9 @@ void MainWindow::paintAllElements(QPainter& painter) {
 
     /* Status area: the icons + the ingame and real timer */
     QRect rectReal = QRect(regionStatus.right() - mainTimerSize.width() - marginSize,
-                               regionStatus.top() + marginSize,
-                               mainTimerSize.width(),
-                               mainTimerSize.height());
+                           regionStatus.top() + marginSize,
+                           mainTimerSize.width(),
+                           mainTimerSize.height());
     QRect rectIngame = QRect(regionStatus.right() - adjustedTimerSize.width() - marginSize,
                              regionStatus.bottom() - adjustedTimerSize.height() - marginSize,
                              adjustedTimerSize.width(),
@@ -490,9 +473,9 @@ void MainWindow::paintAllElements(QPainter& painter) {
 
     icons.paint(painter, regionStatus);
     paintText(painter, rectReal, userFonts["realTimer"], userColors["realTimer"],
-                                 timeControl.elapsedRealTimeString(), Qt::AlignRight | Qt::AlignVCenter);
+              timeControl.elapsedRealTimeString(), Qt::AlignRight | Qt::AlignVCenter);
     paintText(painter, rectIngame, userFonts["ingameTimer"], userColors["ingameTimer"],
-                                 timeControl.elapsedIngameTimeString(), Qt::AlignRight | Qt::AlignVCenter);
+              timeControl.elapsedIngameTimeString(), Qt::AlignRight | Qt::AlignVCenter);
 }
 
 void MainWindow::paintText(QPainter& painter, const QRect& rect, const QFont& font, const QColor& color, const QString& text, int flags) {
@@ -518,9 +501,9 @@ void MainWindow::paintSegmentLine(QPainter& painter, QRect rect, SplitData::segm
 
     /* Segment difference time; display only if the segment was ran or it is the current segment */
     QRect rectDiff = QRect(rect.right() - segmentColumnSizes[2] - segmentColumnSizes[1] - marginSize * 2,
-        rect.top(),
-        segmentColumnSizes[1],
-        rect.height());
+                           rect.top(),
+                           segmentColumnSizes[1],
+                           rect.height());
 
     textColor = userColors["segmentTitle"];
     if (segment.current && timeControl.areBothTimerValid()) {
@@ -529,7 +512,7 @@ void MainWindow::paintSegmentLine(QPainter& painter, QRect rect, SplitData::segm
 
         /* Display with normal text color */
         paintText(painter, rectDiff, userFonts["segmentDiff"], textColor,
-                           TimeController::getStringFromTimeDiff(improtime), Qt::AlignRight | Qt::AlignVCenter);
+                  TimeController::getStringFromTimeDiff(improtime), Qt::AlignRight | Qt::AlignVCenter);
     } else if (segment.ran) {
         if (segment.improtime < 0) {
             textColor = userColors["gainedTime"];
@@ -538,14 +521,14 @@ void MainWindow::paintSegmentLine(QPainter& painter, QRect rect, SplitData::segm
         }
 
         paintText(painter, rectDiff, userFonts["segmentDiff"], textColor,
-                           TimeController::getStringFromTimeDiff(segment.totalimprotime), Qt::AlignRight | Qt::AlignVCenter);
+                  TimeController::getStringFromTimeDiff(segment.totalimprotime), Qt::AlignRight | Qt::AlignVCenter);
     }
 
     /* Segment time (or improvement) */
     QRect rectTime = QRect(rect.right() - segmentColumnSizes[2] - marginSize * 2,
-            rect.top(),
-            segmentColumnSizes[2],
-            rect.height());
+                           rect.top(),
+                           segmentColumnSizes[2],
+                           rect.height());
 
     textColor = userColors["segmentTime"];
     if (segment.ran) {
@@ -558,15 +541,15 @@ void MainWindow::paintSegmentLine(QPainter& painter, QRect rect, SplitData::segm
         }
 
         paintText(painter, rectTime, userFonts["segmentTime"], textColor,
-                           TimeController::getStringFromTime(segment.totaltime), Qt::AlignRight | Qt::AlignVCenter);
+                  TimeController::getStringFromTime(segment.totaltime), Qt::AlignRight | Qt::AlignVCenter);
     } else if (segment.current && timeControl.areBothTimerValid()) {
         textColor = userColors["currentSegment"];
 
         paintText(painter, rectTime, userFonts["segmentTime"], textColor,
-                           TimeController::getStringFromTime(timeControl.elapsedPreferredTime()), Qt::AlignRight | Qt::AlignVCenter);
+                  TimeController::getStringFromTime(timeControl.elapsedPreferredTime()), Qt::AlignRight | Qt::AlignVCenter);
     } else {
         paintText(painter, rectTime, userFonts["segmentTime"], textColor,
-                           TimeController::getStringFromTime(segment.totaltime), Qt::AlignRight | Qt::AlignVCenter);
+                  TimeController::getStringFromTime(segment.totaltime), Qt::AlignRight | Qt::AlignVCenter);
     }
 }
 

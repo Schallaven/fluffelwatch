@@ -107,6 +107,17 @@
     <string>Split when mission number increments</string>
    </property>
   </action>
+  <action name="actionAutosave_at_exit">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Autosave at exit</string>
+   </property>
+   <property name="toolTip">
+    <string>Saves the split data when Fluffelwatch closes</string>
+   </property>
+  </action>
  </widget>
  <layoutdefault spacing="6" margin="11"/>
  <resources/>
@@ -239,6 +250,22 @@
     </hint>
    </hints>
   </connection>
+  <connection>
+   <sender>actionAutosave_at_exit</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>MainWindow</receiver>
+   <slot>onToggleAutosave(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>261</x>
+     <y>136</y>
+    </hint>
+   </hints>
+  </connection>
  </connections>
  <slots>
   <slot>onSplit()</slot>
@@ -251,5 +278,6 @@
   <slot>onConnectToAI()</slot>
   <slot>onDisconnectFromAI()</slot>
   <slot>onToggleAutosplit(bool)</slot>
+  <slot>onToggleAutosave(bool)</slot>
  </slots>
 </ui>

@@ -52,6 +52,7 @@ class MainWindow : public QMainWindow {
     void onSaveAs();
 
     void onToggleAutosplit(bool enable);
+    void onToggleAutosave(bool enable);
 
     void onExit();
 
@@ -93,6 +94,7 @@ class MainWindow : public QMainWindow {
 
     /* Options */
     bool autosplit = false;
+    bool autosave = false;
 
 
 
@@ -119,7 +121,6 @@ class MainWindow : public QMainWindow {
     int segmentColumnSizes[3];
     QList<SplitData::segment> displaySegments;
 
-    QStringList measureList;
 
 
 
