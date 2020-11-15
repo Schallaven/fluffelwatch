@@ -86,7 +86,7 @@ void MainWindow::timerEvent(QTimerEvent* event) {
         /* Send icon states to the icon manager */
         icons.setStates(tempData.iconstates);
 
-        qDebug("New state: section = %d, states = 0x%08X, stoptimer = %d", tempData.section, tempData.iconstates, tempData.stoptimer);
+        qDebug("New state: section = %d, states = 0x%08X, timercontrol = %d", tempData.section, tempData.iconstates, tempData.timercontrol);
     }
 
     /* Process new information */

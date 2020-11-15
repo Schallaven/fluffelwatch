@@ -76,8 +76,8 @@ void FluffelIPCThread::run() {
             quint64 readbytes = client->read(reinterpret_cast<char*>(&value), sizeof(value));
 
             if (readbytes == sizeof(listenerData)) {
-                qDebug("Read from socket: stoptimer = %d, section = %d, iconstates = 0x%08X",
-                       value.stoptimer, value.section, value.iconstates);
+                qDebug("Read from socket: timercontrol = %d, section = %d, iconstates = 0x%08X",
+                       value.timercontrol, value.section, value.iconstates);
                 updateData(value);
             }
 
@@ -142,14 +142,14 @@ void FluffelIPCThread::updateData(const FluffelIPCThread::listenerData& newdata)
     }
 
     accessMutex.lock();
-    internalData.stoptimer  = newdata.stoptimer;
-    internalData.section    = newdata.section;
-    internalData.iconstates = newdata.iconstates;
+    internalData.timercontrol   = newdata.timercontrol;
+    internalData.section        = newdata.section;
+    internalData.iconstates     = newdata.iconstates;
     changed = true;
     accessMutex.unlock();
 }
 
 bool operator==(const FluffelIPCThread::listenerData& lhs, const FluffelIPCThread::listenerData& rhs) {
     /* Allows to compare listener data simply by == */
-    return (lhs.stoptimer == rhs.stoptimer) && (lhs.section == rhs.section) && (lhs.iconstates == rhs.iconstates);
+    return (lhs.timercontrol == rhs.timercontrol) && (lhs.section == rhs.section) && (lhs.iconstates == rhs.iconstates);
 }

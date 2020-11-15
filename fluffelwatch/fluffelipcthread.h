@@ -23,11 +23,21 @@ class FluffelIPCThread : public QThread
          * bytes. */
 #pragma pack(push, 1)
         struct listenerData {
-                quint8  stoptimer;
+                quint8  timercontrol;
                 quint32 section;
                 quint32 iconstates;
         };
 #pragma pack(pop)
+        /* This enum describes the possible values of the timercontrol in
+         * the data struct above. All other values should be ignored.
+         * Note: These values only have effect if the respective options
+         * (autosplit, etc.) are set in Fluffelwatch by the user! */
+        enum control {
+            timeControlNone = 0,        /* Ingame timer should run normally (or continue if paused) */
+            timeControlPause = 1,       /* Ingame timer should be paused (usually done during loading times, etc.) */
+            timeControlStart = 200,     /* Both timers should be reset and started (usually done at the very beginning of a run) */
+            timeControlStop = 201,      /* Both timers should stopped (usually done at the very end of a run) */
+        };
 
         /* Getter function will set the state changed to false */
         listenerData getData();
