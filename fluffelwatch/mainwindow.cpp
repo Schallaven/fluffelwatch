@@ -309,6 +309,16 @@ void MainWindow::onToggleAutosave(bool enable) {
     autosave = enable;
 }
 
+void MainWindow::onToggleAutostartstop(bool enable) {
+    if (enable) {
+        qDebug("Enabled autostart/stop");
+    } else {
+        qDebug("Disabled autostart/stop");
+    }
+
+    autostartstop = enable;
+}
+
 void MainWindow::onExit() {
     /* Whatever is in the split data, save it as a temporary file with a time stamp
      * and set it as last filename used. Of course, only if the split data changed
@@ -337,6 +347,7 @@ void MainWindow::setupContextMenu() {
     this->addAction(ui->action_Pause);
     this->addAction(ui->action_Reset);
     this->addAction(ui->actionAutosplit_between_missions);
+    this->addAction(ui->actionAutostart_stop_the_timers);
     this->addAction(separator1);
     this->addAction(ui->action_Open);
     this->addAction(ui->actionS_ave);
@@ -372,11 +383,10 @@ void MainWindow::readSettings() {
     marginSize = settings->value("marginSize", 0).toInt();
     segmentLines = qMax(2, settings->value("segmentLines").toInt());
 
-    /* Autosplit (will automatically set the boolean through the toggle slot) */
+    /* Autosplit, Autosave, Autostart/stop (will automatically set the boolean through the toggle slot) */
     ui->actionAutosplit_between_missions->setChecked(settings->value("autosplit", false).toBool());
-
-    /* Autosave splitdata when closing Fluffelwatch (will automatically set the boolean through the toggle slot) */
     ui->actionAutosave_at_exit->setChecked(settings->value("autosave", false).toBool());
+    ui->actionAutostart_stop_the_timers->setChecked(settings->value("autostartstop", false).toBool());
 
     /* Read the segment and food data if available */
     readSettingsData();
@@ -581,15 +591,15 @@ void MainWindow::paintSegmentLineFuture(QPainter& painter, const QRect& rect, Sp
 
     /* Segment title */
     paintText(painter, rect, userFonts["segmentTitle"], userColors["segmentTitle"],
-                             segment.title, Qt::AlignLeft | Qt::AlignVCenter);
+              segment.title, Qt::AlignLeft | Qt::AlignVCenter);
 
-     /* Segment time */
+    /* Segment time */
     QRect rectTime = QRect(rect.right() - segmentColumnSizes[2] - marginSize * 2,
                            rect.top(),
                            segmentColumnSizes[2],
                            rect.height());
     paintText(painter, rectTime, userFonts["segmentTime"], userColors["segmentTime"],
-                                 TimeController::getStringFromTime(segment.totaltime), Qt::AlignRight | Qt::AlignVCenter);
+              TimeController::getStringFromTime(segment.totaltime), Qt::AlignRight | Qt::AlignVCenter);
 }
 
 void MainWindow::calculateRegionSizes() {

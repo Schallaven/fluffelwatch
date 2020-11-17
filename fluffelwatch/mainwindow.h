@@ -52,6 +52,7 @@ class MainWindow : public QMainWindow {
 
     void onToggleAutosplit(bool enable);
     void onToggleAutosave(bool enable);
+    void onToggleAutostartstop(bool enable);
 
     void onExit();
 
@@ -81,6 +82,7 @@ class MainWindow : public QMainWindow {
 
     bool autosplit = false;
     bool autosave = false;
+    bool autostartstop = false;
 
     int marginSize;
     int segmentLines;

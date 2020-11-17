@@ -118,6 +118,17 @@
     <string>Saves the split data when Fluffelwatch closes</string>
    </property>
   </action>
+  <action name="actionAutostart_stop_the_timers">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Autostart/stop the timers</string>
+   </property>
+   <property name="toolTip">
+    <string>Allows the initial starting and final stopping of the timers by the socket</string>
+   </property>
+  </action>
  </widget>
  <layoutdefault spacing="6" margin="11"/>
  <resources/>
@@ -266,6 +277,22 @@
     </hint>
    </hints>
   </connection>
+  <connection>
+   <sender>actionAutostart_stop_the_timers</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>MainWindow</receiver>
+   <slot>onToggleAutostartstop(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>261</x>
+     <y>136</y>
+    </hint>
+   </hints>
+  </connection>
  </connections>
  <slots>
   <slot>onSplit()</slot>
@@ -279,5 +306,6 @@
   <slot>onDisconnectFromAI()</slot>
   <slot>onToggleAutosplit(bool)</slot>
   <slot>onToggleAutosave(bool)</slot>
+  <slot>onToggleAutostartstop(bool)</slot>
  </slots>
 </ui>
