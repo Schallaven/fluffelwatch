@@ -25,7 +25,7 @@ class SplitData {
         qint64 totaltime = 0;
         qint64 improtime = 0;
         qint64 totalimprotime = 0;
-        int mission = 0;
+        unsigned int section = 0;
     };
 
     /* Title */
@@ -35,6 +35,9 @@ class SplitData {
     /* Get longest segment title */
     QString getLongestSegmentTitle() const;
 
+    /* Get the current section */
+    unsigned int getCurrentSection() const;
+
     /* Gets n lines of segments around the current one
      * plus the last one. Returns the real number of
      * lines added (if less). */
@@ -42,7 +45,7 @@ class SplitData {
 
     /* Split, returns the number of segments remaining in futureSegments */
     int split(qint64 curtime);
-    int splitToMission(int mission, qint64 curtime);
+    int splitToSection(unsigned int section, qint64 curtime);
     bool canSplit() const;
     bool hasSplit() const;
 

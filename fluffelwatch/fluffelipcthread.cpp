@@ -80,9 +80,6 @@ void FluffelIPCThread::run() {
                        value.timercontrol, value.section, value.iconstates);
                 updateData(value);
             }
-
-            /* Sleep a little bit here to reduce CPU load. */
-            QThread::usleep(100);
         }
     }
 
@@ -94,8 +91,15 @@ void FluffelIPCThread::run() {
 }
 
 FluffelIPCThread::listenerData FluffelIPCThread::getData() {
-    changed = false;
-    return internalData;
+    listenerData tempData = internalData;
+
+    /* Reset the timer control if this is a one-time-command (all above timeControlStart) */
+    if (tempData.timercontrol >= timeControlStart) {
+        internalData.timercontrol = 0;
+    }
+
+    changed = false;    
+    return tempData;
 }
 
 bool FluffelIPCThread::dataChanged() const {
@@ -122,6 +126,9 @@ bool FluffelIPCThread::openListener() {
     }
 
     qDebug("Starting listening at '%s'.", server->fullServerName().toStdString().c_str());
+
+    /* Resetting the data here ensures that any new data sent by the client will be interpreted */
+    updateData(listenerData());
 
     return true;
 }

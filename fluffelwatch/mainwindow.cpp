@@ -87,66 +87,49 @@ void MainWindow::timerEvent(QTimerEvent* event) {
         icons.setStates(tempData.iconstates);
 
         qDebug("New state: section = %d, states = 0x%08X, timercontrol = %d", tempData.section, tempData.iconstates, tempData.timercontrol);
+
+        /* If the timers are NOT running yet, then only react to the autostart signal and only if the user wants that */
+        if (autostartstop && !timeControl.areBothTimerValid() && tempData.timercontrol == FluffelIPCThread::timeControlStart) {
+            qDebug("Got start signal, resetting and starting both timers.");
+            timeControl.resetBothTimer();
+            timeControl.restartBothTimer();
+        }
+
+        /* If the timers are running and the user wants it, react to the autostop signal */
+        else if (autostartstop && timeControl.isAnyTimerRunning() && tempData.timercontrol == FluffelIPCThread::timeControlStop) {
+            qDebug("Got stop signal. Stopping both timers and do a split.");
+            timeControl.pauseBothTimer();
+
+            displaySegments.clear();
+            int remains = data.split(timeControl.elapsedPreferredTime());
+            int segments = data.getCurrentSegments(displaySegments, segmentLines);
+            qDebug("Got %d segments from data object. %d remaining segments.", segments, remains);
+        }
+
+        /* Autosplits enabled, so split if the section number changes */
+        if (autosplit && (tempData.section > data.getCurrentSection())) {
+            qDebug("Do an autosplit to section %d", tempData.section);
+
+            displaySegments.clear();
+            int remains = data.splitToSection(tempData.section, timeControl.elapsedPreferredTime());
+            int segments = data.getCurrentSegments(displaySegments, segmentLines);
+            qDebug("Got %d segments from data object. %d remaining segments.", segments, remains);
+        }
+
+        /* Pause the ingame timer whenever requested */
+        if (timeControl.areBothTimerValid() && timeControl.isIngameTimerRunning()
+                && tempData.timercontrol == FluffelIPCThread::timeControlPause) {
+            qDebug("Pausing ingame timer.");
+            timeControl.pauseIngameTimer();
+        }
+
+        /* Resume ingame timer whenever requested */
+        else if (timeControl.areBothTimerValid() && !timeControl.isIngameTimerRunning()
+                 && tempData.timercontrol == FluffelIPCThread::timeControlNone) {
+            qDebug("Continuing ingame timer");
+            timeControl.resumeIngameTimer();
+        }
     }
-
-    /* Process new information */
-//    if (memoryReaderThread.isRunning()) {
-//        /* Let's get the data into a temporary buffer */
-//        FluffelMemoryThread::gameData tempGameData = memoryReaderThread.getData();
-
-//        /* Add measurement if neccessary */
-//        if ((tempGameData.gamestate != currentGameData.gamestate) || (tempGameData.loading != currentGameData.loading) ||
-//                (tempGameData.mission != currentGameData.mission)) {
-//            measureList.append(QString("%1\t%2\t%3\t%4\t%5")
-//                               .arg(FluffelTimer::getStringFromTime(timerReal.elapsed_with_pause()))
-//                               .arg(timerReal.elapsed_with_pause())
-//                               .arg(tempGameData.mission)
-//                               .arg(tempGameData.loading)
-//                               .arg(tempGameData.gamestate));
-//        }
-
-//        /* Check if gamestate and/or loading changed to adapt the icon states */
-//        if ((tempGameData.gamestate != currentGameData.gamestate) || (tempGameData.loading != currentGameData.loading)) {
-//            updateIcons(tempGameData);
-//        }
-
-//        /* If loading changed, then we might want to either pause or resume the adjusted timer */
-//        if (tempGameData.loading != currentGameData.loading) {
-//            if (tempGameData.loading == FluffelMemoryThread::loadingCircle) {
-//                timerAdjusted.pause();
-//            } else if (tempGameData.loading != FluffelMemoryThread::loadingCircle) {
-//                timerAdjusted.resume();
-//            }
-//        }
-
-//        /* Mission number changed, we skip forward into our split data until the first entry with
-//         * this mission id is visible */
-//        if (tempGameData.mission != currentGameData.mission) {
-//            /* This can happen sometimes if we save during a mission. Ignore the reset of the mission number */
-//            if ((tempGameData.mission == 0) && (currentGameData.mission > 0)) {
-//                tempGameData.mission = currentGameData.mission;
-//            } else {
-//                qDebug("Mission changed from %d to %d", currentGameData.mission, tempGameData.mission);
-//            }
-
-//            /* Autosplit only if the new mission is larger then the previous one. */
-//            if (autosplit && (tempGameData.mission > currentGameData.mission)) {
-//                displaySegments.clear();
-//                int remains = data.splitToMission(tempGameData.mission, timerReal.elapsed_with_pause());
-//                int segments = data.getCurrentSegments(displaySegments, segmentLines);
-//                qDebug("Got %d segments from data object. %d remaining segments.", segments, remains);
-
-//                /* Stop the timer if that was the last split */
-//                if (remains == 0) {
-//                    timerReal.pause();
-//                    timerAdjusted.pause();
-//                }
-//            }
-//        }
-
-//        /* Save game data */
-//        currentGameData = tempGameData;
-//    }
 
     /* Update the display */
     update();
@@ -278,18 +261,7 @@ void MainWindow::onSaveAs() {
     data.saveData(filename);
 }
 
-void MainWindow::onToggleAutosplit(bool enable) {
-    /*displaySegments.clear();
-    int remains = data.splitToMission(20, timeControl.elapsedPreferredTime());
-    int segments = data.getCurrentSegments(displaySegments, segmentLines);
-    qDebug("Got %d segments from data object. %d remaining segments.", segments, remains);
-    */
-
-    /* Stop the timer if that was the last split */
-    /*if (remains == 0) {
-        timeControl.pauseBothTimer();
-    }*/
-
+void MainWindow::onToggleAutosplit(bool enable) {    
     if (enable) {
         qDebug("Enabled autosplit");
     } else {

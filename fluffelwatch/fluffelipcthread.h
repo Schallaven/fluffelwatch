@@ -23,9 +23,9 @@ class FluffelIPCThread : public QThread
          * bytes. */
 #pragma pack(push, 1)
         struct listenerData {
-                quint8  timercontrol;
-                quint32 section;
-                quint32 iconstates;
+                quint8  timercontrol = 0;
+                quint32 section = 0;
+                quint32 iconstates = 0;
         };
 #pragma pack(pop)
         /* This enum describes the possible values of the timercontrol in

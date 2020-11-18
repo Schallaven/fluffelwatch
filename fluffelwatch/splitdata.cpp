@@ -54,7 +54,7 @@ void SplitData::loadData(const QString& filename) {
         segmentData.title = fields.at(0);
         segmentData.runtime = fields.at(1).toLongLong();
         segmentData.besttime = fields.at(2).toLongLong();
-        segmentData.mission = fields.at(3).toLongLong();
+        segmentData.section = fields.at(3).toLongLong();
 
         allSegments.push_back(segmentData);
     }
@@ -94,7 +94,7 @@ void SplitData::saveData(const QString& filename) {
     /* Write a line for each segment */
     for (int i = 0; i < allSegments.size(); ++i) {
         segment data = allSegments[i];
-        out << data.title << ", " << data.runtime << ", " << data.besttime << ", " << data.mission << "\n";
+        out << data.title << ", " << data.runtime << ", " << data.besttime << ", " << data.section << "\n";
     }
 
     /* Close file */
@@ -127,6 +127,16 @@ QString SplitData::getLongestSegmentTitle() const {
     }
 
     return allSegments[index].title;
+}
+
+unsigned int SplitData::getCurrentSection() const {
+    /* Return the section number of the first element of future segments, which is
+     * the current section. Should there be no elements left then return zero */
+    if (futureSegments.size() == 0) {
+        return 0;
+    }
+
+    return futureSegments[0].section;
 }
 
 int SplitData::getCurrentSegments(QList<SplitData::segment>& list, int lines) const {
@@ -197,8 +207,8 @@ int SplitData::split(qint64 curtime) {
     return futureSegments.size();
 }
 
-int SplitData::splitToMission(int mission, qint64 curtime) {
-    qDebug("Spliting until mission %d", mission);
+int SplitData::splitToSection(unsigned int section, qint64 curtime) {
+    qDebug("Spliting until mission %d", section);
 
     /* Splits the current segment using curtime. Returns >0 if possible and 0
      * if there is nothing more to split. */
@@ -208,13 +218,13 @@ int SplitData::splitToMission(int mission, qint64 curtime) {
 
     /* If the very first element in futureSegments has already the mission number or
      * any higher then the one we want to jump to, we do nothing. */
-    if (futureSegments.first().mission >= mission) {
+    if (futureSegments.first().section >= section) {
         return futureSegments.size();
     }
 
     /* The first element in futureSegments is the current segment and this segment
      * should point to the mission given. Remove all others, step by step. */
-    while((futureSegments.size() > 0) && (futureSegments.first().mission != mission)) {
+    while((futureSegments.size() > 0) && (futureSegments.first().section != section)) {
         /* In contrast to the split function, we do not add times to these removed
          * ones before we add them to the _front_ of pastSegments. Just mark them
          * as "ran". */
