@@ -64,6 +64,9 @@ class MainWindow : public QMainWindow {
     void setupContextMenu();
     void setupGlobalShortcuts();
 
+    /* Timer id */
+    int timerID;
+
     /* Window movement control */
     bool isMoving = false;
     QPoint movingStartPos;

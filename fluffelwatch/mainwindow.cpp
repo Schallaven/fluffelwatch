@@ -16,8 +16,8 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::MainWi
     /* Calculate the region and window size */
     calculateRegionSizes();
 
-    /* Start timer every 100 msec (can do faster timers, but it costs CPU load!) */
-    startTimer(100, Qt::PreciseTimer);
+    /* Start timer every 10 msec (can do faster timers, but it costs CPU load!) */
+    timerID = startTimer(10, Qt::PreciseTimer);
 
     /* Start the thread for managing IPC to allow external programs to
      * change section number and iconstates */
@@ -28,6 +28,9 @@ MainWindow::~MainWindow() {
     /* Request exit of the thread and give it some time to exit */
     ipcthread.requestInterruption();
     QThread::msleep(ipcthread.timeout * 2);
+
+    /* Kill the timer we started */
+    killTimer(timerID);
 
     /* Destroy everything */
     delete ui;
@@ -298,6 +301,7 @@ void MainWindow::onExit() {
      * it will be loaded next time Fluffelwatch is opened. */
     if (autosave && data.hasSplit()) {
         QString filename = QDateTime::currentDateTime().toString("yyyy.MM.dd hh:mm:ss") + " " + data.getTitle() + ".conf";
+        data.reset(true);
         data.saveData(filename);
         settings->setValue("Data/segmentData", filename);
     }
@@ -586,9 +590,9 @@ void MainWindow::calculateRegionSizes() {
     QFontMetrics segTime(userFonts["segmentTime"]);
     QSize sizeTitle = segTitle.size(Qt::TextSingleLine, data.getLongestSegmentTitle());
     segmentColumnSizes[0] = sizeTitle.width();
-    QSize sizeDiff = segDiff.size(Qt::TextSingleLine, " −00:00:00.0 ");
+    QSize sizeDiff = segDiff.size(Qt::TextSingleLine, " −00:00:00.00 ");
     segmentColumnSizes[1] = sizeDiff.width();
-    QSize sizeTime = segTime.size(Qt::TextSingleLine, " 00:00:00.0 ");
+    QSize sizeTime = segTime.size(Qt::TextSingleLine, " 00:00:00.00 ");
     segmentColumnSizes[2] = sizeTime.width();
     segmentSize.setWidth(sizeTitle.width() + marginSize + sizeDiff.width() + marginSize + sizeTime.width());
     segmentSize.setHeight(qMax(qMax(sizeTitle.height(), sizeDiff.height()), sizeTime.height()));
@@ -598,10 +602,10 @@ void MainWindow::calculateRegionSizes() {
 
     /* Calculate status bar (with the two timers) */
     QFontMetrics mtFm(userFonts["realTimer"]);
-    mainTimerSize = mtFm.size(Qt::TextSingleLine, "00:00:00.0");
+    mainTimerSize = mtFm.size(Qt::TextSingleLine, "00:00:00.00");
 
     QFontMetrics atFm(userFonts["ingameTimer"]);
-    adjustedTimerSize = atFm.size(Qt::TextSingleLine, "00:00:00.0");
+    adjustedTimerSize = atFm.size(Qt::TextSingleLine, "00:00:00.00");
 
     QSize iconArea = adjustedTimerSize;
 

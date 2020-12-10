@@ -61,7 +61,7 @@ qint64 FluffelTimer::elapsed_with_pause() const {
 QString FluffelTimer::toString() const {
     /* Invalidate times */
     if (!isValid()) {
-        return QString("00:00:00.0");
+        return QString("00:00:00.00");
     }
 
     /* Transfer the milliseconds qint64 into a
@@ -74,9 +74,9 @@ QString FluffelTimer::getStringFromTime(qint64 time) {
     int hours = time / 3600000;                                                      /* 1 hour has 3 600 000 msec */
     int minutes = (time - hours * 3600000) / 60000;                                  /* 1 minutes has 60 000 msec */
     int seconds = (time - hours * 3600000 - minutes * 60000) / 1000;                 /* 1 second has 1 000 msec */
-    int per_sec = (time - hours * 3600000 - minutes * 60000 - seconds * 1000) / 100; /* a 10th of a second has 100 msecs */
+    int per_sec = (time - hours * 3600000 - minutes * 60000 - seconds * 1000) / 10;  /* a 100th of a second has 10 msecs */
 
-    return QString::asprintf("%02d:%02d:%02d.%01d", hours, minutes, seconds, per_sec);
+    return QString::asprintf("%02d:%02d:%02d.%02d", hours, minutes, seconds, per_sec);
 }
 
 QString FluffelTimer::getStringFromTimeDiff(qint64 timediff) {
