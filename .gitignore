@@ -4,6 +4,15 @@ bin/*
 !build/README.md
 !bin/README.md
 
+# Example data
+!bin/example_splitdata.conf
+!bin/example_fluffelwatch.conf
+
+# Python files
+*.pyc
+__pycache__/
+*.log
+
 # C++ objects and libs
 *.slo
 *.lo
