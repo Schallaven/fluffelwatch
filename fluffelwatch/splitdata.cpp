@@ -270,7 +270,7 @@ void SplitData::reset(bool merge) {
     qDebug("reset: %d past, %d future", pastSegments.size(), futureSegments.size());
 
     /* Merging means that we need to go through the list of pastSegments in reverse order and
-     * check if the run times were better than the best times */
+     * check if the run times were better (smaller) than the best times */
     if (merge) {
         qDebug("merging");
         int pastelements = pastSegments.size();
@@ -278,7 +278,7 @@ void SplitData::reset(bool merge) {
             segment data = pastSegments[pastelements - i - 1];
 
             allSegments[i].runtime = data.runtime;
-            if (data.runtime > allSegments[i].besttime) {
+            if (data.runtime < allSegments[i].besttime) {
                 allSegments[i].besttime = data.runtime;
             }
         }
